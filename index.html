@@ -1149,8 +1149,8 @@ function updateFixedBadge() {
   if (customBadge) {
     raw = customBadge;
   } else {
-    var fm = allMalls.filter(function(m){return m.fixedSchedule && m.id!=='xiaoyuan';});
-    if (fm.length) raw = fm.map(function(m){return m.name.split('（')[0].slice(0,4)+' '+m.fixedSchedule;}).join('\n');
+    var fm = allMalls.filter(function(m){return m.fixedSchedule && m.fixedSchedule!=='独立排期';});
+    if (fm.length) raw = fm.map(function(m){return m.name.split('（')[0]+' '+m.fixedSchedule;}).join('\n');
     else raw = '点击编辑';
   }
   var lines = raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
