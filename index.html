@@ -104,14 +104,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .btn-danger { background:#fff; color:var(--danger); border:1px solid var(--danger); }
 .btn-secondary { background:#f0f0f0; color:#666; }
 .action-row { display:flex; gap:6px; align-items:center; }
-.action-row button { font-size:14px; padding:5px 9px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; flex:0 0 auto; line-height:1; }
-.action-row button:hover { background:#f0f7ff; }
-.sort-control { flex:1; min-width:0; position:relative; }
-.sort-control select { width:100%; font-size:12px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; font-family:inherit; text-align-last:center; text-align:center; }
-.sort-editbar { display:none; align-items:center; justify-content:space-between; gap:4px; border:1px solid #3498db; border-radius:8px; background:#eaf4ff; padding:3px 4px; height:100%; }
+.action-row > button { height:32px; box-sizing:border-box; font-size:14px; padding:0 10px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+.action-row > button:hover { background:#f0f7ff; }
+.sort-control { flex:1; min-width:0; position:relative; height:32px; }
+/* 自定义下拉 */
+.sort-dd { position:relative; height:100%; }
+.sort-dd-btn { width:100%; height:32px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; padding:0 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; font-family:inherit; color:var(--text); }
+.sort-dd-btn:hover { background:#f0f7ff; border-color:#bcd; }
+.sort-dd-arrow { color:#999; font-size:11px; flex:0 0 auto; }
+.sort-dd-menu { display:none; position:absolute; top:36px; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.12); z-index:60; overflow:hidden; }
+.sort-dd-menu.show { display:block; }
+.sort-dd-item { padding:8px 12px; font-size:12px; cursor:pointer; text-align:center; color:var(--text); }
+.sort-dd-item:hover { background:#f0f7ff; }
+.sort-dd-item.active { background:#eaf4ff; color:#2c6fb3; font-weight:600; }
+/* 编辑横条 */
+.sort-editbar { display:none; align-items:center; justify-content:space-between; gap:4px; height:32px; box-sizing:border-box; border:1px solid #3498db; border-radius:8px; background:#eaf4ff; padding:3px; }
 .sort-editbar.show { display:flex; }
-.sort-control.editing select { display:none; }
-.se-btn { flex:0 0 auto; width:26px; height:24px; border-radius:6px; border:none; cursor:pointer; font-size:14px; font-weight:700; line-height:1; padding:0; }
+.sort-control.editing .sort-dd { display:none; }
+.se-btn { flex:0 0 auto; width:28px; height:24px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:700; padding:0; display:flex; align-items:center; justify-content:center; }
 .se-cancel { background:#fdecea; color:#e74c3c; }
 .se-cancel:hover { background:#f8c9c2; }
 .se-confirm { background:#d3f5d3; color:#1e8a3b; }
@@ -210,12 +220,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <button onclick="document.getElementById('importFile').click()" title="导入 JSON 备份">📤</button>
         <button onclick="resetData()" title="恢复默认数据">🔄</button>
         <div class="sort-control" id="sortControl">
-          <select id="sortSelect" onchange="changeSort(this.value)" title="排序方式">
-            <option value="district">按所在区域</option>
-            <option value="coopCount">按合作次数</option>
-            <option value="closestDate">按最近排期</option>
-            <option value="custom">✋ 自定义排序</option>
-          </select>
+          <div class="sort-dd" id="sortDD">
+            <button class="sort-dd-btn" id="sortDDBtn" onclick="toggleSortMenu(event)" title="排序方式">
+              <span id="sortDDLabel">按所在区域</span>
+              <span class="sort-dd-arrow">▾</span>
+            </button>
+            <div class="sort-dd-menu" id="sortDDMenu">
+              <div class="sort-dd-item" onclick="pickSort('district')">按所在区域</div>
+              <div class="sort-dd-item" onclick="pickSort('coopCount')">按合作次数</div>
+              <div class="sort-dd-item" onclick="pickSort('closestDate')">按最近排期</div>
+              <div class="sort-dd-item" onclick="pickSort('custom')">自定义排序</div>
+            </div>
+          </div>
           <div class="sort-editbar" id="sortEditBar">
             <button class="se-btn se-cancel" onclick="cancelCustomEdit()" title="取消（撤销本次拖动）">✕</button>
             <span class="se-label">自定义排序</span>
@@ -759,15 +775,36 @@ function filteredMalls() {
   }
   return list;
 }
+var SORT_LABELS = { district:'按所在区域', coopCount:'按合作次数', closestDate:'按最近排期', custom:'自定义排序' };
+
+function toggleSortMenu(e) {
+  if (e) e.stopPropagation();
+  var menu = document.getElementById('sortDDMenu');
+  var willShow = !menu.classList.contains('show');
+  closeSortMenu();
+  if (willShow) {
+    // 标记当前项
+    var items = menu.querySelectorAll('.sort-dd-item');
+    items.forEach(function(it){ it.classList.toggle('active', it.textContent.trim() === SORT_LABELS[sortMode]); });
+    menu.classList.add('show');
+  }
+}
+function closeSortMenu() { var m=document.getElementById('sortDDMenu'); if(m) m.classList.remove('show'); }
+function pickSort(mode) { closeSortMenu(); changeSort(mode); }
+function updateSortLabel() {
+  var lbl = document.getElementById('sortDDLabel');
+  if (lbl) lbl.textContent = SORT_LABELS[sortMode] || '排序';
+}
+
 function changeSort(mode) {
   if (mode === 'custom') { enterCustomEdit(); return; }
-  sortMode = mode; renderMallList();
+  sortMode = mode; updateSortLabel(); renderMallList();
 }
 
 function showSortSelect() {
   document.getElementById('sortControl').classList.remove('editing');
   document.getElementById('sortEditBar').classList.remove('show');
-  document.getElementById('sortSelect').value = sortMode;
+  updateSortLabel();
 }
 function showSortEditBar() {
   document.getElementById('sortControl').classList.add('editing');
@@ -1403,12 +1440,10 @@ function saveBadgeText() {
 
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('fixedBadge').addEventListener('click', openBadgeModal);
-  // 排序下拉：聚焦时清空当前值，使再次选中同一项（如已是"自定义"）也能触发 change
-  var sortSel = document.getElementById('sortSelect');
-  if (sortSel) {
-    sortSel.addEventListener('focus', function(){ this.dataset.restore = this.value; this.value = ''; });
-    sortSel.addEventListener('blur', function(){ if (this.value === '' && this.dataset.restore) this.value = this.dataset.restore; });
-  }
+  // 点击下拉菜单以外区域时收起
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#sortDD')) closeSortMenu();
+  });
 });
 
 // ==================== MODAL ====================
