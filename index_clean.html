@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>宠物回家企划活动信息地图</title>
+<link rel="icon" href="data:,">
+<style>
+:root { --gold:#f0a500; --bg:#f5f5f5; --panel-bg:#fff; --text:#333; --muted:#999; --border:#e0e0e0; --danger:#e74c3c; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); height:100dvh; overflow:hidden; }
+.header { background:#fff; padding:8px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); z-index:100; position:relative; flex-wrap:wrap; }
+.header h1 { font-size:16px; white-space:nowrap; }
+.header .badge { font-size:11px; background:#ffeaa7; color:#d63031; padding:2px 8px; border-radius:10px; cursor:default; display:inline-flex; align-items:center; gap:6px; max-width:60vw; }
+.header .badge.editable { cursor:pointer; border:1.5px dashed #d63031; }
+.header .badge.editable:hover { background:#fff3cd; }
+.header .badge .badge-icon { flex-shrink:0; }
+.header .badge .badge-scroll-area { overflow:hidden; white-space:nowrap; position:relative; height:1.6em; line-height:1.6em; }
+.header .badge .badge-text-line { white-space:nowrap; position:absolute; top:0; left:0; height:100%; display:flex; align-items:center; }
+.header .badge .badge-static { white-space:nowrap; }
+.edit-toggle { font-size:12px; padding:4px 12px; border-radius:14px; border:1.5px solid #ccc; background:#fff; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+.edit-toggle.on { background:#e74c3c; color:#fff; border-color:#e74c3c; }
+.container { display:flex; height:calc(100dvh - 52px); }
+.sidebar { width:320px; min-width:320px; background:var(--panel-bg); border-right:1px solid var(--border); overflow:hidden; display:flex; flex-direction:column; transition:transform 0.25s; z-index:50; }
+.sidebar input[type=text] { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; box-sizing:border-box; font-family:inherit; }
+.sidebar input[type=text]:focus { outline:none; border-color:#3498db; }
+.sidebar.hidden { transform:translateX(-100%); min-width:0; width:0; }
+.sidebar-section { padding:12px 14px; border-bottom:1px solid var(--border); }
+.sidebar-section h3 { font-size:13px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
+.filter-row { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { font-size:12px; padding:4px 10px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+.chip.active { background:#333; color:#fff; border-color:#333; }
+.chip.quality { border-color:var(--gold); color:var(--gold); font-weight:600; }
+.chip.quality.active { background:var(--gold); color:#fff; }
+.chip.first { border-color:#00b894; color:#00b894; }
+.chip.first.active { background:#00b894; color:#fff; }
+.mall-list { flex:1; overflow-y:auto; }
+.mall-item { padding:10px 14px; border-bottom:1px solid #f0f0f0; cursor:pointer; transition:background 0.15s; display:flex; align-items:flex-start; gap:8px; }
+.mall-item:hover { background:#fafafa; }
+.mall-item.selected { background:#eef6ff; }
+.mall-item.dragging { background:#eaf4ff; opacity:0.9; box-shadow:0 4px 14px rgba(0,0,0,0.18); }
+.drag-handle { flex-shrink:0; color:#bbb; font-size:18px; line-height:1.2; cursor:grab; touch-action:none; user-select:none; padding:0 2px; margin-top:2px; animation:handleIn 0.25s ease; }
+.drag-handle:active { cursor:grabbing; color:#3498db; }
+@keyframes handleIn { from { transform:translateX(-16px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes handleOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(-16px); opacity:0; } }
+.mall-item.handle-leaving .drag-handle { animation:handleOut 0.25s ease forwards; }
+.mall-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:6px; }
+.mall-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.mall-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.mall-name { font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+.mall-meta { font-size:11px; color:var(--muted); }
+.mall-badges { display:flex; gap:4px; flex-wrap:wrap; }
+.mall-badges span { font-size:10px; padding:1px 6px; border-radius:8px; }
+.mall-badges .q { background:#fff3cd; color:#b8860b; }
+.mall-badges .n { background:#d4f7ef; color:#00b894; }
+.mall-actions { display:flex; gap:3px; flex-shrink:0; }
+.mall-actions button { font-size:11px; padding:2px 6px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; min-width:26px; }
+.mall-actions .btn-del { color:var(--danger); border-color:var(--danger); }
+.map-wrap { flex:1; position:relative; }
+#map { width:100%; height:100%; }
+.float-weather { position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.95); border-radius:10px; padding:8px 14px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.12); z-index:30; line-height:1.5; min-width:110px; }
+.float-weather .wtitle { font-size:11px; color:var(--muted); }
+.float-weather .temp { font-size:22px; font-weight:700; }
+.float-weather .desc { color:var(--muted); font-size:11px; }
+.float-legend { position:absolute; bottom:20px; left:10px; background:rgba(255,255,255,0.95); border-radius:10px; padding:8px 12px; font-size:11px; box-shadow:0 2px 8px rgba(0,0,0,0.12); z-index:30; line-height:1.8; }
+.float-legend .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+.float-actions { position:absolute; bottom:20px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:30; }
+.float-actions button { width:40px; height:40px; border-radius:50%; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:15px; cursor:pointer; line-height:40px; text-align:center; }
+.float-actions button.active-tool { background:#3498db; color:#fff; }
+.info-card { padding:4px 6px; font-size:13px; line-height:1.6; min-width:200px; max-width:280px; }
+.info-card h4 { font-size:15px; margin-bottom:6px; }
+.info-card .row { display:flex; justify-content:space-between; margin-bottom:1px; }
+.info-card .lbl { color:var(--muted); }
+.info-card .iw-weather { margin-top:6px; padding-top:4px; border-top:1px solid #eee; font-size:12px; color:#3498db; }
+.toggle-btn { position:absolute; top:10px; left:10px; z-index:40; background:#fff; border:none; border-radius:50%; width:36px; height:36px; box-shadow:0 2px 8px rgba(0,0,0,0.14); font-size:16px; cursor:pointer; display:none; }
+.modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:200; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto; }
+.modal-overlay.show { display:flex; }
+.modal { background:#fff; border-radius:14px; width:90%; max-width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.18); margin-bottom:40px; }
+.modal-header { padding:16px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.modal-header h3 { font-size:16px; }
+.modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--muted); padding:4px; }
+.modal-body { padding:16px 18px; max-height:60vh; overflow-y:auto; }
+.modal-body label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; margin-top:12px; }
+.modal-body label:first-child { margin-top:0; }
+.modal-body input, .modal-body select, .modal-body textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; transition:border-color 0.15s; }
+.modal-body input:focus, .modal-body select:focus, .modal-body textarea:focus { outline:none; border-color:#3498db; }
+.modal-body textarea { resize:vertical; min-height:50px; }
+.modal-body .row-2 { display:flex; gap:10px; }
+.modal-body .row-2 > div { flex:1; }
+.modal-body .hint { font-size:11px; color:var(--muted); margin-top:2px; }
+.suggestions { display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; z-index:50; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+.autocomplete-wrap { position:relative; }
+.suggestions.show { display:block; }
+.suggestions .sug-item { padding:10px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f5f5f5; }
+.suggestions .sug-item:hover { background:#f0f7ff; }
+.suggestions .sug-item .sug-name { font-weight:500; }
+.suggestions .sug-item .sug-addr { font-size:11px; color:var(--muted); }
+.modal-footer { padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+.btn { padding:8px 20px; border-radius:8px; border:none; font-size:14px; cursor:pointer; }
+.btn-primary { background:#333; color:#fff; }
+.btn-danger { background:#fff; color:var(--danger); border:1px solid var(--danger); }
+.btn-secondary { background:#f0f0f0; color:#666; }
+.action-row { display:flex; gap:6px; align-items:center; }
+.action-row > button { height:32px; box-sizing:border-box; font-size:14px; padding:0 10px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+.action-row > button:hover { background:#f0f7ff; }
+.sort-control { flex:1; min-width:0; position:relative; height:32px; }
+/* 自定义下拉 */
+.sort-dd { position:relative; height:100%; }
+.sort-dd-btn { width:100%; height:32px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; padding:0 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; font-family:inherit; color:var(--text); }
+.sort-dd-btn:hover { background:#f0f7ff; border-color:#bcd; }
+.sort-dd-arrow { color:#999; font-size:11px; flex:0 0 auto; }
+.sort-dd-menu { display:none; position:absolute; top:36px; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.12); z-index:60; overflow:hidden; }
+.sort-dd-menu.show { display:block; }
+.sort-dd-item { padding:8px 12px; font-size:12px; cursor:pointer; text-align:center; color:var(--text); }
+.sort-dd-item:hover { background:#f0f7ff; }
+.sort-dd-item.active { background:#eaf4ff; color:#2c6fb3; font-weight:600; }
+/* 编辑横条 */
+.sort-editbar { display:none; align-items:center; justify-content:space-between; gap:4px; height:32px; box-sizing:border-box; border:1px solid #3498db; border-radius:8px; background:#eaf4ff; padding:3px; }
+.sort-editbar.show { display:flex; }
+.sort-control.editing .sort-dd { display:none; }
+.se-btn { flex:0 0 auto; width:28px; height:24px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:700; padding:0; display:flex; align-items:center; justify-content:center; }
+.se-cancel { background:#fdecea; color:#e74c3c; }
+.se-cancel:hover { background:#f8c9c2; }
+.se-confirm { background:#d3f5d3; color:#1e8a3b; }
+.se-confirm:hover { background:#b2ecb2; }
+.se-label { flex:1; text-align:center; font-size:12px; color:#2c6fb3; font-weight:600; white-space:nowrap; }
+.route-result { display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.95); border-radius:10px; padding:8px 16px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:35; white-space:nowrap; }
+.route-result.show { display:block; }
+.route-result strong { color:#3498db; }
+.search-banner { display:none; position:absolute; top:12px; left:50%; transform:translateX(-50%); background:#fff; border-radius:12px; padding:8px 12px; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,0.18); z-index:38; align-items:center; gap:10px; max-width:90%; }
+.search-banner.show { display:flex; }
+.search-banner #searchBannerText { font-weight:500; color:#333; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-cell { padding:4px 2px; text-align:center; cursor:pointer; border-radius:6px; font-size:13px; min-height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; border:1.5px solid transparent; transition:all 0.1s; position:relative; }
+.cal-cell:hover { background:#f0f7ff; }
+.cal-cell.dow { font-weight:600; color:var(--muted); font-size:11px; cursor:default; background:transparent; min-height:auto; padding:2px; }
+.cal-cell.dow.dow-sun { color:#e74c3c; }
+.cal-cell.dow:hover { background:transparent; }
+.cal-cell.empty { opacity:0; cursor:default; background:transparent; }
+.cal-cell.is-today { background:#dbeaff; color:#1d6fcb; font-weight:700; }
+.cal-cell.has-event { background:#ffe0e0; color:#c0392b; font-weight:700; }
+.cal-cell.has-past { background:#fff3c4; color:#a07000; font-weight:700; }
+.cal-cell.today-event { background:#d3f5d3; color:#1e8a3b; font-weight:700; }
+.cal-cell.selected { border-color:#3498db; box-shadow:0 0 0 2px rgba(52,152,219,0.35); }
+.cal-cell .cal-num { font-size:14px; line-height:1.15; }
+.cal-cell .cal-sub { font-size:9px; line-height:1.2; margin-top:1px; }
+.cal-cell .cal-sub.term { color:#2c6fb3; }
+.cal-cell .cal-sub.lunar { color:#9a9a9a; font-weight:400; }
+.cal-cell .cal-sub.hol, .cal-cell .cal-sub.wd { color:#fff; font-size:8px; padding:0 4px; border-radius:3px; }
+.cal-cell .cal-sub.hol { background:#e74c3c; }
+.cal-cell .cal-sub.wd { background:#fd7e14; }
+.cal-cell .cal-note-mark { position:absolute; top:2px; right:3px; font-size:9px; line-height:1; }
+.cal-legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; padding:0 2px; justify-content:center; font-size:11px; color:#666; }
+.cal-legend .lg-item { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.cal-legend .lg-sw { width:11px; height:11px; border-radius:3px; display:inline-block; flex:0 0 auto; }
+.cal-legend .lg-tag { display:inline-flex; align-items:center; justify-content:center; width:14px; height:13px; border-radius:3px; color:#fff; font-size:8px; font-style:normal; flex:0 0 auto; }
+.cal-detail { margin-top:14px; padding:12px; background:#fafafa; border-radius:8px; font-size:13px; min-height:60px; }
+/* 当天详情：活动/备注行 + 操作按钮 */
+.cd-group { margin-top:10px; }
+.cd-title { font-size:12px; font-weight:600; margin-bottom:4px; }
+.cd-row { display:flex; align-items:center; gap:6px; padding:3px 0; }
+.cd-text { flex:1; min-width:0; font-size:13px; }
+.cd-text::before { content:'·'; margin-right:5px; color:#bbb; font-weight:700; }
+.cd-acts { flex:0 0 auto; display:flex; gap:4px; }
+.cd-btn { width:26px; height:24px; border:1px solid var(--border); background:#fff; border-radius:6px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+.cd-btn { font-size:10px; }            /* 铅笔 emoji 偏大，缩小 */
+.cd-btn.cd-del { font-size:15px; }     /* 垃圾桶 emoji 偏小，放大 */
+.cd-btn:hover { background:#f0f7ff; }
+.cd-btn.cd-del:hover { background:#fdecea; border-color:#e74c3c; }
+.cal-nav { display:flex; gap:5px; align-items:center; }
+.cal-nav button { font-size:12px; padding:3px 9px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; }
+.cal-nav button:hover { background:#f0f0f0; }
+#calModalOverlay .modal-header { padding:8px 14px; }
+#calModalOverlay .modal-header h3 { font-size:15px; }
+.cal-jump-btn { padding:3px 9px !important; }
+.sched-row { display:flex; gap:6px; align-items:flex-end; margin-bottom:6px; }
+.sched-row > div { flex:1; min-width:0; }
+.sched-row > div > span { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
+.sched-row input[type=date] { width:100%; box-sizing:border-box; }
+.sched-remove { width:38px; height:38px; border-radius:8px; border:1.5px dashed #aaa; background:#fafafa; color:#555; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; line-height:1; flex-shrink:0; padding:0; transition:all 0.15s; }
+.sched-remove:hover { background:#f0f7ff; border-color:#3498db; color:#3498db; }
+.sched-add { font-size:12px; padding:8px 12px; margin-top:4px; border:1.5px dashed #aaa; background:#fafafa; border-radius:8px; cursor:pointer; width:100%; color:#555; transition:all 0.15s; }
+.sched-add:hover { background:#f0f7ff; border-color:#3498db; color:#3498db; }
+.cal-jump-btn { padding:4px 10px; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; font-size:12px; }
+.cal-jump-btn:hover { background:#f0f7ff; border-color:#3498db; color:#3498db; }
+.past-edit-panel { display:none; background:#fffaf0; border:1.5px solid #f0e0a0; border-radius:8px; padding:12px 14px; margin-bottom:14px; }
+.past-edit-panel.show { display:block; }
+.past-edit-panel h4 { font-size:14px; color:#a07000; margin-bottom:8px; }
+.past-edit-panel label { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; margin-top:8px; }
+.past-edit-panel label:first-of-type { margin-top:0; }
+.past-edit-panel input, .past-edit-panel textarea { width:100%; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; box-sizing:border-box; transition:border-color 0.15s; }
+.past-edit-panel input:focus, .past-edit-panel textarea:focus { outline:none; border-color:#a07000; }
+.past-edit-panel .row-2 { display:flex; gap:10px; }
+.past-edit-panel .row-2 > div { flex:1; }
+.past-edit-panel .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
+@media (max-width:768px) {
+  .sidebar { position:fixed; top:52px; left:0; bottom:0; z-index:50; width:280px; min-width:280px; box-shadow:2px 0 12px rgba(0,0,0,0.15); }
+  .sidebar.hidden { transform:translateX(-100%); }
+  .toggle-btn { display:block; }
+  .float-legend { bottom:60px; font-size:10px; }
+  .modal { width:95%; max-width:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐾 宠物回家企划活动信息地图</h1>
+  <span class="badge editable" id="fixedBadge" title="点击编辑此栏"></span>
+  <span style="flex:1"></span>
+  <small style="color:#3498db;font-size:12px;cursor:pointer;text-decoration:underline dotted;font-weight:500" id="clock" title="点击查看日历" onclick="openCalModal()"></small>
+</div>
+
+<div class="container">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <h3>🔍 搜索任意位置 → 添加为合作场地</h3>
+      <div class="autocomplete-wrap" style="position:relative">
+        <input type="text" id="searchBox" placeholder="输入商场/地标/任意场地名称" autocomplete="off">
+        <div class="suggestions" id="searchSugBox"></div>
+      </div>
+      <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px">从下拉中选一项 → 地图定位 → 顶部点"添加为合作场地"</div>
+    </div>
+    <div class="sidebar-section">
+      <h3>🔎 筛选</h3>
+      <div class="filter-row" id="districtFilters"></div>
+      <div style="margin-top:8px" class="filter-row">
+        <span class="chip quality" data-filter="quality">⭐ 优质</span>
+        <span class="chip first" data-filter="first">🆕 首次合作</span>
+        <span class="chip" data-filter="all" style="background:#333;color:#fff">全部</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h3>📋 活动场地列表 (<span id="mallCount">0</span>)</h3>
+      <div class="action-row">
+        <button onclick="exportData()" title="导出 JSON 备份">📥</button>
+        <button onclick="document.getElementById('importFile').click()" title="导入 JSON 备份">📤</button>
+        <button onclick="resetData()" title="恢复默认数据">🔄</button>
+        <div class="sort-control" id="sortControl">
+          <div class="sort-dd" id="sortDD">
+            <button class="sort-dd-btn" id="sortDDBtn" onclick="toggleSortMenu(event)" title="排序方式">
+              <span id="sortDDLabel">按所在区域</span>
+              <span class="sort-dd-arrow">▾</span>
+            </button>
+            <div class="sort-dd-menu" id="sortDDMenu">
+              <div class="sort-dd-item" onclick="pickSort('district')">按所在区域</div>
+              <div class="sort-dd-item" onclick="pickSort('coopCount')">按合作次数</div>
+              <div class="sort-dd-item" onclick="pickSort('closestDate')">按最近排期</div>
+              <div class="sort-dd-item" onclick="pickSort('custom')">自定义排序</div>
+            </div>
+          </div>
+          <div class="sort-editbar" id="sortEditBar">
+            <button class="se-btn se-cancel" onclick="cancelCustomEdit()" title="取消（撤销本次拖动）">✕</button>
+            <span class="se-label">自定义排序</span>
+            <button class="se-btn se-confirm" onclick="confirmCustomEdit()" title="确认保存顺序">✓</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="mall-list" id="mallList"></div>
+  </div>
+
+  <div class="map-wrap">
+    <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">☰</button>
+    <div id="map"></div>
+    <div class="search-banner" id="searchBanner">
+      <span id="searchBannerText"></span>
+      <button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="addSearchedPoi()">＋ 添加为合作场地</button>
+      <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="cancelSearchedPoi()">取消</button>
+    </div>
+    <div class="float-weather" id="weather"><div class="wtitle">北京</div><div class="desc">加载中...</div></div>
+    <div class="float-legend" id="legend"></div>
+    <div class="route-result" id="routeResult"></div>
+    <div class="float-actions">
+      <button onclick="measureStraight()" id="btnStraight" title="直线测距">📏</button>
+      <button onclick="measureRoute()" id="btnRoute" title="驾车路线测距">🚗</button>
+      <button onclick="clearMeasure()" title="清除测距">✖</button>
+      <button onclick="fitAll()" title="缩放到全部">🔲</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="modal-overlay" id="calModalOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="calMonthTitle">日历</h3>
+      <div class="cal-nav">
+        <button class="cal-jump-btn" onclick="openJumpPicker()" title="跳转到指定日期">📅 跳转</button>
+        <input type="date" id="calJumpDate" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none" onchange="jumpToDate(this.value);this.value='';">
+        <button onclick="calPrev()">◀</button>
+        <button onclick="calToday()">今天</button>
+        <button onclick="calNext()">▶</button>
+        <button class="modal-close" onclick="closeCalModal()" style="margin-left:6px">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span class="lg-item"><i class="lg-sw" style="background:#f7a8a8"></i>已排活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#f5d976"></i>过往活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9be0a3"></i>今天有活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9dc4f5"></i>今天</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#e74c3c">休</i>节假日</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#fd7e14">班</i>调休</span>
+      </div>
+      <div class="cal-detail" id="calDetail">点击日期查看当天详情</div>
+      <div class="past-edit-panel" id="pastEditPanel">
+        <h4>添加过往活动</h4>
+        <div class="row-2">
+          <div><label>日期 *</label><input type="date" id="pastDate"></div>
+          <div><label>地点 *（联想已添加场地）</label>
+            <input list="venueDataList" id="pastLocation" placeholder="商场名/地标" autocomplete="off">
+            <datalist id="venueDataList"></datalist>
+          </div>
+        </div>
+        <label>活动信息（可选）</label>
+        <textarea id="pastNotes" rows="2" placeholder="活动名称、参与人数等"></textarea>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="cancelAddPast()">取消</button>
+          <button class="btn btn-primary" onclick="savePastActivity()">保存</button>
+        </div>
+      </div>
+      <div class="past-edit-panel" id="noteEditPanel">
+        <h4 id="noteEditTitle">添加备注</h4>
+        <label>备注内容</label>
+        <textarea id="noteText" rows="3" placeholder="输入备注内容"></textarea>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="cancelNoteEdit()">取消</button>
+          <button class="btn btn-primary" onclick="saveNoteEdit()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BADGE EDIT MODAL -->
+<div class="modal-overlay" id="badgeModalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h3>编辑标题栏文字</h3><button class="modal-close" onclick="closeBadgeModal()">✕</button></div>
+    <div class="modal-body">
+      <label>内容（每行一条，支持多行）</label>
+      <textarea id="badgeTextarea" rows="5" style="font-size:14px;line-height:1.6"></textarea>
+      <div class="hint">单行：静止显示。<br>多行：每行依次在 📌 后慢速滚动播放，每行播完暂停 10 秒。<br>留空则恢复自动生成（基于已设固定排期的商场）。</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeBadgeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveBadgeText()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">编辑商场</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <label>商场名称 *</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="fName" placeholder="输入商场名称自动搜索" autocomplete="off">
+        <div class="suggestions" id="sugBox"></div>
+      </div>
+      <label>详细地址</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="fAddress" placeholder="输入地址或地标，下拉中显示完整地址" autocomplete="off">
+        <div class="suggestions" id="sugBoxAddr"></div>
+      </div>
+      <button type="button" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;margin-top:4px" onclick="geocodeAddress()">🔍 根据地址定位坐标</button>
+
+      <div class="row-2" style="margin-top:8px">
+        <div><label>所属区域 *</label>
+          <select id="fDistrict"><option value="">请选择</option>
+            <option>东城区</option><option>西城区</option><option>朝阳区</option><option>海淀区</option>
+            <option>丰台区</option><option>石景山区</option><option>通州区</option><option>大兴区</option>
+            <option>顺义区</option><option>昌平区</option><option>其他</option></select></div>
+        <div><label>场地类型</label>
+          <select id="fVenueType"><option value="indoor">室内</option><option value="outdoor">室外</option><option value="both">室内+室外</option></select></div>
+      </div>
+      <div class="row-2">
+        <div><label>经度</label><input type="text" id="fLng" placeholder="自动填充"></div>
+        <div><label>纬度</label><input type="text" id="fLat" placeholder="自动填充"></div>
+      </div>
+      <div class="row-2">
+        <div><label>质量评级</label><select id="fQuality"><option value="high">⭐ 优质</option><option value="medium">普通</option><option value="low">一般</option></select></div>
+        <div><label>首次合作</label><select id="fFirstCoop"><option value="false">否</option><option value="true">是</option></select></div>
+      </div>
+      <div class="row-2">
+        <div><label>已合作次数</label><input type="number" id="fCoopCount" value="0" min="0"></div>
+        <div><label>固定排期规则</label>
+          <select id="fFixedSchedule"><option value="">无</option><option value="每月第二个周六">每月第二个周六</option><option value="每月第四个周末">每月第四个周末</option><option value="独立排期">独立排期</option></select></div>
+      </div>
+      <label>已定排期时间（最多 8 条，每条单日或连续 2 天）</label>
+      <div id="scheduledRows"></div>
+      <div class="hint">💡 单日只填"开始"；连续两天填"开始+结束"；列表中只显示最近一条排期</div>
+      <label>备注</label><textarea id="fNotes" placeholder="如：场地偏小，注意笼位限制"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnDelete" style="margin-right:auto;display:none" onclick="deleteMall()">🗑 删除</button>
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveMall()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== 配置 ====================
+var AMAP_KEY = '0477a4bc2d60c2f38924aa9559a6cbde';
+var STORAGE_KEY = 'pet_adoption_map_v5';
+var BADGE_KEY = 'pet_adoption_badge_v5';
+
+var DISTRICT_COLORS = {
+  '东城区':'#e74c3c','西城区':'#3498db','朝阳区':'#e67e22','海淀区':'#2ecc71',
+  '丰台区':'#9b59b6','石景山区':'#1abc9c','通州区':'#f39c12','大兴区':'#e91e63',
+  '顺义区':'#00bcd4','昌平区':'#795548','其他':'#95a5a6'
+};
+var VENUE_LABELS = { indoor:'室内', outdoor:'室外', both:'室内+室外' };
+
+var PAST_KEY = 'pet_past_activities_v1';
+function loadPastActivities() { try { return JSON.parse(localStorage.getItem(PAST_KEY) || '[]'); } catch(e) { return []; } }
+function savePastActivities() { localStorage.setItem(PAST_KEY, JSON.stringify(pastActivities)); }
+var pastActivities = loadPastActivities();
+
+var DAYNOTE_KEY = 'pet_day_notes_v1';
+function loadDayNotes() {
+  var raw = {};
+  try { raw = JSON.parse(localStorage.getItem(DAYNOTE_KEY) || '{}'); } catch(e) { raw = {}; }
+  // 迁移：旧版每天单条字符串 -> 数组
+  Object.keys(raw).forEach(function(k){ if (typeof raw[k] === 'string') raw[k] = raw[k] ? [raw[k]] : []; });
+  return raw;
+}
+function saveDayNotes() { localStorage.setItem(DAYNOTE_KEY, JSON.stringify(dayNotes)); }
+var dayNotes = loadDayNotes();
+function notesOf(ds){ var a = dayNotes[ds]; return (a && a.length) ? a : []; }
+
+var ORDER_KEY = 'pet_custom_order_v1';
+function loadCustomOrder() { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch(e) { return []; } }
+function saveCustomOrder() { localStorage.setItem(ORDER_KEY, JSON.stringify(customOrder)); }
+var customOrder = loadCustomOrder();
+// 确保 customOrder 与现有场地同步：补新增、删已删
+function syncCustomOrder() {
+  var ids = allMalls.map(function(m){return m.id;});
+  customOrder = customOrder.filter(function(id){return ids.indexOf(id)>=0;});
+  ids.forEach(function(id){ if(customOrder.indexOf(id)<0) customOrder.push(id); });
+}
+
+function normalizeMall(m) {
+  // 兼容旧字段 scheduledDates -> scheduledDatesList
+  if (!m.scheduledDatesList) {
+    if (m.scheduledDates) {
+      var parts = m.scheduledDates.split('~');
+      m.scheduledDatesList = [{ start: parts[0], end: parts[1] || parts[0] }];
+    } else {
+      m.scheduledDatesList = [];
+    }
+  }
+  return m;
+}
+
+function fmtMD(d) { if(!d)return''; var p=d.split('-'); return parseInt(p[1])+'/'+parseInt(p[2]); }
+function fmtRange(r) {
+  if (!r || !r.start) return '';
+  if (!r.end || r.end === r.start) return fmtMD(r.start);
+  if (r.start.slice(0,7) === r.end.slice(0,7)) return fmtMD(r.start) + '-' + parseInt(r.end.split('-')[2]);
+  return fmtMD(r.start) + ' - ' + fmtMD(r.end);
+}
+function getClosestUpcoming(list) {
+  if (!list || !list.length) return null;
+  var today = new Date().toISOString().slice(0, 10);
+  var upcoming = list.filter(function(r) { return r.start && ((r.end||r.start) >= today); });
+  if (!upcoming.length) return null;
+  upcoming.sort(function(a, b) { return a.start.localeCompare(b.start); });
+  return upcoming[0];
+}
+
+var DEFAULT_DATA = [
+  { id:'raffles', name:'东直门来福士', district:'东城区', address:'东城区东直门南大街1号', lng:'116.4344', lat:'39.9399', quality:'high', firstCoop:false, coopCount:8, fixedSchedule:'每月第二个周六', scheduledDates:'', venueType:'indoor', notes:'固定排期锚点' },
+  { id:'heshenghui', name:'朝阳合生汇', district:'朝阳区', address:'朝阳区西大望路21号', lng:'116.4781', lat:'39.9080', quality:'high', firstCoop:false, coopCount:6, fixedSchedule:'每月第四个周末', scheduledDates:'', venueType:'indoor', notes:'固定排期锚点' },
+  { id:'solana', name:'蓝色港湾', district:'朝阳区', address:'朝阳区朝阳公园路6号', lng:'116.4736', lat:'39.9487', quality:'high', firstCoop:false, coopCount:4, fixedSchedule:null, scheduledDates:'', venueType:'outdoor', notes:'冬季注意保暖' },
+  { id:'taikooli', name:'三里屯太古里', district:'朝阳区', address:'朝阳区三里屯路19号', lng:'116.4546', lat:'39.9330', quality:'high', firstCoop:false, coopCount:3, fixedSchedule:null, scheduledDates:'', venueType:'outdoor', notes:'注意噪音管控' },
+  { id:'mixc-haidian', name:'万象城（海淀）', district:'海淀区', address:'海淀区清河中街', lng:'116.3450', lat:'40.0360', quality:'high', firstCoop:true, coopCount:0, fixedSchedule:null, scheduledDates:'', venueType:'indoor', notes:'首次勘场' },
+  { id:'jinyuan', name:'世纪金源', district:'海淀区', address:'海淀区远大路1号', lng:'116.2870', lat:'39.9585', quality:'medium', firstCoop:false, coopCount:2, fixedSchedule:null, scheduledDates:'', venueType:'indoor', notes:'' },
+  { id:'xidan-joycity', name:'西单大悦城', district:'西城区', address:'西城区西单北大街131号', lng:'116.3738', lat:'39.9120', quality:'high', firstCoop:false, coopCount:1, fixedSchedule:null, scheduledDates:'', venueType:'indoor', notes:'场地偏小' },
+  { id:'xiaoyuan', name:'顺义救助站（小院）', district:'顺义区', address:'顺义区（内部场地）', lng:'116.6530', lat:'40.1400', quality:'high', firstCoop:false, coopCount:12, fixedSchedule:'独立排期', scheduledDates:'', venueType:'indoor', notes:'500+只动物，内部场地' }
+];
+
+// ==================== 数据持久化 ====================
+function loadData() {
+  var d;
+  try { var r=localStorage.getItem(STORAGE_KEY); if(r){var p=JSON.parse(r);if(Array.isArray(p)&&p.length)d=p;} } catch(e){}
+  if (!d) d = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  d.forEach(normalizeMall);
+  return d;
+}
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(allMalls)); }
+function loadBadge() { return localStorage.getItem(BADGE_KEY)||''; }
+function saveBadge(t) { localStorage.setItem(BADGE_KEY, t); }
+
+// ==================== 运行状态 ====================
+var map = null;
+var allMalls = loadData();
+var activeFilter = 'all';
+var sortMode = 'district';
+var editingOrder = false;     // 是否处于自定义排序的编辑态
+var orderSnapshot = null;     // 进入编辑前的顺序快照（取消时还原）
+var measureTool = null;
+var measurePath = [];
+var routePolylines = [];
+var routeMarkersTemp = [];
+var routeClickHandler = null;
+var editingId = null;
+var activeTool = null;
+var customBadge = loadBadge();
+var lastWeatherMallId = null; // 记录上一次天气对应的商场
+
+// ==================== 地址搜索自动补全（SDK AMap.AutoComplete） ====================
+function fillFromPoi(p) {
+  if (!p || !p.location) return;
+  document.getElementById('fName').value = p.name || '';
+  document.getElementById('fAddress').value = (p.district||'') + (p.address||'');
+  document.getElementById('fLng').value = (+p.location.lng).toFixed(4);
+  document.getElementById('fLat').value = (+p.location.lat).toFixed(4);
+  var sel = document.getElementById('fDistrict');
+  for (var i=0;i<sel.options.length;i++) {
+    if (sel.options[i].value && (p.district||'').indexOf(sel.options[i].value)>=0) { sel.value=sel.options[i].value; break; }
+  }
+}
+
+function setupAutocomplete() {
+  if (typeof AMap === 'undefined' || !AMap.AutoComplete) { setTimeout(setupAutocomplete, 300); return; }
+  // fName 仍然用 SDK 自带的下拉（POI 名称）
+  try {
+    var auto1 = new AMap.AutoComplete({ input: 'fName', city: '北京', citylimit: true });
+    auto1.on('select', function(e) { if (e.poi && e.poi.location) fillFromPoi(e.poi); });
+  } catch(err) { console.warn('fName autocomplete failed', err); }
+  // fAddress 用自定义下拉，显示完整地址
+  setupAddressAutocomplete();
+}
+
+function setupAddressAutocomplete() {
+  var input = document.getElementById('fAddress');
+  var sugBox = document.getElementById('sugBoxAddr');
+  if (!input || !sugBox || !AMap.AutoComplete) { setTimeout(setupAddressAutocomplete, 300); return; }
+  var auto = new AMap.AutoComplete({ city:'北京', citylimit:true });
+  var timer;
+  function norm(v){ if(v==null)return''; if(Array.isArray(v))return v.length?v.join(' '):''; return String(v); }
+
+  function doSearch() {
+    var kw = input.value.trim();
+    if (!kw) { sugBox.classList.remove('show'); return; }
+    auto.search(kw, function(status, result) {
+      if (status !== 'complete' || !result.tips) { sugBox.classList.remove('show'); return; }
+      var tips = result.tips.filter(function(t){ return t.location && t.location.lng && t.name; });
+      if (!tips.length) { sugBox.classList.remove('show'); return; }
+      var html = '';
+      tips.slice(0,8).forEach(function(t){
+        var district = norm(t.district);
+        var address = norm(t.address);
+        var fullAddr = district + address;
+        html += '<div class="sug-item" data-name="'+esc(t.name)+'" data-addr="'+esc(address)+'" data-district="'+esc(district)+'" data-lng="'+t.location.lng+'" data-lat="'+t.location.lat+'">'
+          + '<div class="sug-name">'+esc(t.name)+'</div>'
+          + '<div class="sug-addr">'+esc(fullAddr||'（无详细地址）')+'</div></div>';
+      });
+      sugBox.innerHTML = html;
+      sugBox.classList.add('show');
+      sugBox.querySelectorAll('.sug-item').forEach(function(el){
+        el.addEventListener('mousedown', function(e){ e.preventDefault(); });
+        el.addEventListener('click', function(){
+          var d = this.dataset;
+          input.value = d.district + d.addr;
+          document.getElementById('fLng').value = parseFloat(d.lng).toFixed(4);
+          document.getElementById('fLat').value = parseFloat(d.lat).toFixed(4);
+          var sel = document.getElementById('fDistrict');
+          for (var i=0;i<sel.options.length;i++) {
+            if (sel.options[i].value && d.district.indexOf(sel.options[i].value)>=0) { sel.value=sel.options[i].value; break; }
+          }
+          sugBox.classList.remove('show');
+        });
+      });
+    });
+  }
+  input.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(doSearch, 250); });
+  input.addEventListener('focus', function(){ if(input.value.trim()) doSearch(); });
+  input.addEventListener('click', function(){ if(input.value.trim()) doSearch(); });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#sugBoxAddr') && e.target !== input) sugBox.classList.remove('show');
+  });
+}
+
+// ==================== 地址→坐标（SDK AMap.Geocoder） ====================
+function geocodeAddress() {
+  var addr = document.getElementById('fAddress').value.trim();
+  if (!addr) { alert('请先输入详细地址'); return; }
+  if (typeof AMap === 'undefined' || !AMap.Geocoder) { alert('地理编码插件未加载，请刷新页面'); return; }
+  var geocoder = new AMap.Geocoder({ city: '北京' });
+  geocoder.getLocation(addr, function(status, result) {
+    if (status === 'complete' && result.geocodes && result.geocodes.length) {
+      var loc = result.geocodes[0].location;
+      document.getElementById('fLng').value = (+loc.lng).toFixed(4);
+      document.getElementById('fLat').value = (+loc.lat).toFixed(4);
+      alert('已定位：' + result.geocodes[0].formattedAddress);
+    } else {
+      alert('未找到坐标，请尝试更详细的地址（如"朝阳区西大望路21号"）');
+    }
+  });
+}
+
+function esc(s) {
+  if (s == null) return '';
+  if (Array.isArray(s)) s = s.join(' ');
+  s = String(s);
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== 驾车路线（SDK AMap.Driving） ====================
+var drivingObj = null;
+function calcDrivingRoute(startLng, startLat, endLng, endLat) {
+  showRouteResult('🚗 计算中...');
+  if (typeof AMap === 'undefined' || !AMap.Driving) {
+    showRouteResult('⚠️ 路线规划插件未加载');
+    return;
+  }
+  if (drivingObj) { try { drivingObj.clear(); } catch(e){} drivingObj = null; }
+  try {
+    drivingObj = new AMap.Driving({ map: map, hideMarkers: true, autoFitView: false, showTraffic: false });
+  } catch(e) {
+    showRouteResult('⚠️ 创建路线对象失败：' + e.message);
+    return;
+  }
+  drivingObj.search([startLng, startLat], [endLng, endLat], function(status, result) {
+    if (status === 'complete' && result.routes && result.routes.length) {
+      var r = result.routes[0];
+      var dist = (r.distance/1000).toFixed(1);
+      var time = Math.round(r.time/60);
+      showRouteResult('🚗 驾车 <strong>' + dist + ' 公里</strong> · 约 <strong>' + time + ' 分钟</strong>');
+    } else {
+      var msg = '路线计算失败';
+      if (typeof result === 'string') msg += '：' + result;
+      else if (result && result.info) msg += '：' + result.info;
+      else msg += '（status=' + status + '）';
+      showRouteResult('⚠️ ' + msg);
+    }
+  });
+}
+
+// ==================== 地图初始化 ====================
+function initApp() {
+  map = new AMap.Map('map', { zoom:11, center:[116.4074,39.9042], mapStyle:'amap://styles/light', resizeEnable:true, features:['bg','road','building','point'] });
+  map.addControl(new AMap.ControlBar({ position:{right:'10px',top:'50px'} }));
+  setupAutocomplete();
+  setupSearchBox();
+  renderAll();
+  fetchWeather(39.9042, 116.4074, '北京');
+  updateClock();
+  setInterval(updateClock, 30000);
+}
+
+// ==================== 顶部搜索 → 添加为合作场地 ====================
+var pendingPoi = null;
+var candidateMarker = null;
+
+function pickSearchPoi(poi) {
+  pendingPoi = poi;
+  var pos = [+poi.location.lng, +poi.location.lat];
+  map.setCenter(pos); map.setZoom(16);
+  if (candidateMarker) candidateMarker.setMap(null);
+  candidateMarker = new AMap.Marker({
+    position: pos,
+    content: '<div style="background:#3498db;color:#fff;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:3px solid #fff"><span style="transform:rotate(45deg);font-size:18px">📍</span></div>',
+    offset: new AMap.Pixel(-18, -36),
+    map: map,
+    zIndex: 200
+  });
+  document.getElementById('searchBannerText').textContent = poi.name;
+  document.getElementById('searchBanner').classList.add('show');
+}
+
+function setupSearchBox() {
+  if (typeof AMap === 'undefined' || !AMap.AutoComplete) { setTimeout(setupSearchBox, 300); return; }
+  var input = document.getElementById('searchBox');
+  var sugBox = document.getElementById('searchSugBox');
+  if (!input || !sugBox) { setTimeout(setupSearchBox, 300); return; }
+  var auto = new AMap.AutoComplete({ city: '北京', citylimit: true });
+  var timer;
+
+  function doSearch() {
+    var kw = input.value.trim();
+    if (!kw) { sugBox.classList.remove('show'); return; }
+    auto.search(kw, function(status, result) {
+      if (status !== 'complete' || !result.tips) { sugBox.classList.remove('show'); return; }
+      var tips = result.tips.filter(function(t){ return t.location && t.location.lng && t.name; });
+      if (!tips.length) { sugBox.classList.remove('show'); return; }
+      function norm(v){ if(v==null)return''; if(Array.isArray(v))return v.length?v.join(' '):''; return String(v); }
+      var html = '';
+      tips.slice(0, 8).forEach(function(t) {
+        var district = norm(t.district);
+        var address = norm(t.address);
+        var fullAddr = district + address;
+        html += '<div class="sug-item" data-name="' + esc(t.name) + '" data-addr="' + esc(address) + '" data-district="' + esc(district) + '" data-lng="' + t.location.lng + '" data-lat="' + t.location.lat + '">'
+          + '<div class="sug-name">' + esc(t.name) + '</div>'
+          + '<div class="sug-addr">' + esc(fullAddr || '（无详细地址）') + '</div></div>';
+      });
+      sugBox.innerHTML = html;
+      sugBox.classList.add('show');
+      sugBox.querySelectorAll('.sug-item').forEach(function(el) {
+        el.addEventListener('mousedown', function(e){ e.preventDefault(); });
+        el.addEventListener('click', function() {
+          var d = this.dataset;
+          var poi = {
+            name: d.name,
+            district: d.district,
+            address: d.addr,
+            location: { lng: parseFloat(d.lng), lat: parseFloat(d.lat) }
+          };
+          input.value = d.name;
+          sugBox.classList.remove('show');
+          pickSearchPoi(poi);
+        });
+      });
+    });
+  }
+
+  input.addEventListener('input', function() { clearTimeout(timer); timer = setTimeout(doSearch, 250); });
+  input.addEventListener('focus', function() { if (input.value.trim()) doSearch(); });
+  input.addEventListener('click', function() { if (input.value.trim()) doSearch(); });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#searchSugBox') && e.target !== input) sugBox.classList.remove('show');
+  });
+}
+
+function addSearchedPoi() {
+  if (!pendingPoi) return;
+  openAddModal();
+  fillFromPoi(pendingPoi);
+  cancelSearchedPoi();
+}
+
+function cancelSearchedPoi() {
+  pendingPoi = null;
+  if (candidateMarker) { candidateMarker.setMap(null); candidateMarker = null; }
+  document.getElementById('searchBanner').classList.remove('show');
+  document.getElementById('searchBox').value = '';
+}
+
+// ==================== 渲染 ====================
+function renderAll() { renderLegend(); renderFilters(); renderMallList(); addMarkers(); updateFixedBadge(); }
+
+function renderLegend() {
+  var h='';
+  for (var d in DISTRICT_COLORS) h+='<span class="dot" style="background:'+DISTRICT_COLORS[d]+'"></span>'+d+' ';
+  document.getElementById('legend').innerHTML=h+'<br>⭐优质 🆕首次 📌固定排期';
+}
+function renderFilters() {
+  var dists={}; allMalls.forEach(function(m){dists[m.district]=true;});
+  var h=''; Object.keys(dists).sort().forEach(function(d){h+='<span class="chip" data-filter="'+d+'">'+d+'</span>';});
+  document.getElementById('districtFilters').innerHTML=h;
+  document.querySelectorAll('.chip[data-filter]').forEach(function(el){el.onclick=function(){
+    document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('active');});
+    this.classList.add('active');activeFilter=this.dataset.filter;
+    if(activeFilter==='all')document.querySelector('.chip[data-filter="all"]').classList.add('active');
+    renderMallList();addMarkers();
+  };});
+}
+function filteredMalls() {
+  // 自定义排序模式：忽略筛选，显示全部，按 customOrder 排列
+  if (sortMode === 'custom') {
+    syncCustomOrder();
+    return customOrder.map(function(id){ return allMalls.find(function(m){return m.id===id;}); }).filter(Boolean);
+  }
+
+  var list;
+  if(activeFilter==='all') list = allMalls.slice();
+  else if(activeFilter==='quality') list = allMalls.filter(function(m){return m.quality==='high';});
+  else if(activeFilter==='first') list = allMalls.filter(function(m){return m.firstCoop;});
+  else list = allMalls.filter(function(m){return m.district===activeFilter;});
+
+  if (sortMode === 'district') {
+    list.sort(function(a,b){ return (a.district||'').localeCompare(b.district||'','zh-CN'); });
+  } else if (sortMode === 'coopCount') {
+    list.sort(function(a,b){ return (b.coopCount||0) - (a.coopCount||0); });
+  } else if (sortMode === 'closestDate') {
+    list.sort(function(a,b){
+      var na = getClosestUpcoming(a.scheduledDatesList);
+      var nb = getClosestUpcoming(b.scheduledDatesList);
+      if (!na && !nb) return 0;
+      if (!na) return 1;
+      if (!nb) return -1;
+      return na.start.localeCompare(nb.start);
+    });
+  }
+  return list;
+}
+var SORT_LABELS = { district:'按所在区域', coopCount:'按合作次数', closestDate:'按最近排期', custom:'自定义排序' };
+
+function toggleSortMenu(e) {
+  if (e) e.stopPropagation();
+  var menu = document.getElementById('sortDDMenu');
+  var willShow = !menu.classList.contains('show');
+  closeSortMenu();
+  if (willShow) {
+    // 标记当前项
+    var items = menu.querySelectorAll('.sort-dd-item');
+    items.forEach(function(it){ it.classList.toggle('active', it.textContent.trim() === SORT_LABELS[sortMode]); });
+    menu.classList.add('show');
+  }
+}
+function closeSortMenu() { var m=document.getElementById('sortDDMenu'); if(m) m.classList.remove('show'); }
+function pickSort(mode) { closeSortMenu(); changeSort(mode); }
+function updateSortLabel() {
+  var lbl = document.getElementById('sortDDLabel');
+  if (lbl) lbl.textContent = SORT_LABELS[sortMode] || '排序';
+}
+
+function changeSort(mode) {
+  if (mode === 'custom') { enterCustomEdit(); return; }
+  sortMode = mode; updateSortLabel(); renderMallList();
+}
+
+function showSortSelect() {
+  document.getElementById('sortControl').classList.remove('editing');
+  document.getElementById('sortEditBar').classList.remove('show');
+  updateSortLabel();
+}
+function showSortEditBar() {
+  document.getElementById('sortControl').classList.add('editing');
+  document.getElementById('sortEditBar').classList.add('show');
+}
+
+function enterCustomEdit() {
+  syncCustomOrder();
+  orderSnapshot = customOrder.slice();   // 记录进入前的顺序
+  sortMode = 'custom';
+  editingOrder = true;
+  showSortEditBar();
+  renderMallList();                       // 渲染带手柄（手柄会从左滑入）
+}
+
+function exitCustomEdit() {
+  editingOrder = false;
+  // 手柄向左滑出
+  document.querySelectorAll('#mallList .mall-item').forEach(function(el){ el.classList.add('handle-leaving'); });
+  showSortSelect();
+  setTimeout(function(){ renderMallList(); }, 250);  // 动画结束后重渲染（去掉手柄）
+}
+
+function confirmCustomEdit() {
+  saveCustomOrder();        // 保留当前拖好的顺序
+  orderSnapshot = null;
+  exitCustomEdit();
+}
+
+function cancelCustomEdit() {
+  if (orderSnapshot) { customOrder = orderSnapshot.slice(); saveCustomOrder(); }  // 还原
+  orderSnapshot = null;
+  exitCustomEdit();
+}
+function renderMallList() {
+  var list=filteredMalls();
+  document.getElementById('mallCount').textContent=list.length;
+  var h='';
+  list.forEach(function(m){
+    var c=DISTRICT_COLORS[m.district]||'#95a5a6';
+    var b='';
+    if(m.quality==='high')b+='<span class="q">优质</span>';
+    if(m.firstCoop)b+='<span class="n">新</span>';
+    if(m.fixedSchedule)b+='<span style="background:#e8e0ff;color:#6c5ce7">'+m.fixedSchedule.replace('每月','')+'</span>';
+    var next=getClosestUpcoming(m.scheduledDatesList);
+    if(next){
+      var totalN=(m.scheduledDatesList||[]).length;
+      var allRanges=(m.scheduledDatesList||[]).map(fmtRange).join(' / ');
+      var moreTip = totalN>1 ? '\n共 '+totalN+' 条排期：'+allRanges : '';
+      b+='<span style="background:#d4f7ef;color:#00b894" title="最近：'+esc(fmtRange(next))+esc(moreTip)+'">📅'+fmtRange(next)+(totalN>1?' +'+(totalN-1):'')+'</span>';
+    }
+    var handle = editingOrder ? '<span class="drag-handle" title="按住拖动排序">⠿</span>' : '';
+    h+='<div class="mall-item'+(editingOrder?' drag-mode':'')+'" data-id="'+m.id+'">'
+      +handle
+      +'<span class="mall-dot" style="background:'+c+'" onclick="focusMall(\''+m.id+'\')"></span>'
+      +'<div class="mall-main">'
+        +'<div class="mall-top">'
+          +'<span class="mall-name" onclick="focusMall(\''+m.id+'\')" title="'+esc(m.name)+'">'+esc(m.name)+'</span>'
+          +'<span class="mall-actions">'
+            +'<button onclick="event.stopPropagation();openEditModal(\''+m.id+'\')">✏️</button>'
+            +'<button class="btn-del" onclick="event.stopPropagation();confirmDelete(\''+m.id+'\')">🗑</button>'
+          +'</span>'
+        +'</div>'
+        +'<div class="mall-meta" onclick="focusMall(\''+m.id+'\')">'+m.district+' · '+(VENUE_LABELS[m.venueType]||'室内')+' · 已合作'+m.coopCount+'次</div>'
+        +(b?'<div class="mall-badges" onclick="focusMall(\''+m.id+'\')">'+b+'</div>':'')
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('mallList').innerHTML=h;
+  if (editingOrder) bindDragHandles();
+}
+
+// ==================== 自定义排序拖拽 ====================
+var dragState = null;
+function bindDragHandles() {
+  document.querySelectorAll('#mallList .drag-handle').forEach(function(h){
+    h.addEventListener('pointerdown', onDragStart);
+  });
+}
+function onDragStart(e) {
+  e.preventDefault();
+  var item = e.target.closest('.mall-item');
+  if (!item) return;
+  dragState = { el: item };
+  item.classList.add('dragging');
+  try { e.target.setPointerCapture(e.pointerId); } catch(err){}
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+}
+function onDragMove(e) {
+  if (!dragState) return;
+  e.preventDefault();
+  var list = document.getElementById('mallList');
+  var y = e.clientY;
+  var others = Array.prototype.slice.call(list.querySelectorAll('.mall-item:not(.dragging)'));
+  var after = null;
+  for (var i=0;i<others.length;i++){
+    var r = others[i].getBoundingClientRect();
+    if (y < r.top + r.height/2) { after = others[i]; break; }
+  }
+  if (after) list.insertBefore(dragState.el, after);
+  else list.appendChild(dragState.el);
+}
+function onDragEnd(e) {
+  if (!dragState) return;
+  dragState.el.classList.remove('dragging');
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+  // 从 DOM 顺序重建 customOrder
+  customOrder = Array.prototype.slice.call(document.querySelectorAll('#mallList .mall-item'))
+    .map(function(el){ return el.getAttribute('data-id'); });
+  saveCustomOrder();
+  dragState = null;
+}
+
+function highlightMallInList(id) {
+  document.querySelectorAll('.mall-item').forEach(function(el){el.classList.remove('selected');});
+  var item = document.querySelector('.mall-item[data-id="'+id+'"]');
+  if (item) {
+    item.classList.add('selected');
+    // 自动滚到列表中间
+    if (item.scrollIntoView) item.scrollIntoView({ block:'center', behavior:'smooth' });
+  }
+}
+
+function focusMall(id) {
+  var m = allMalls.find(function(x){return x.id===id;});
+  if (!m || !map) return;
+  var pos = [parseFloat(m.lng), parseFloat(m.lat)];
+  map.setCenter(pos);
+  map.setZoom(15);
+  setTimeout(function(){ showInfoWindow(m); }, 150);
+  highlightMallInList(id);
+}
+
+function addMarkers() {
+  if(!map)return;
+  map.clearMap();
+  routePolylines.forEach(function(p){p.setMap(null);});
+  routePolylines=[];
+
+  filteredMalls().forEach(function(m){
+    var c=DISTRICT_COLORS[m.district]||'#95a5a6';
+    var sz=m.quality==='high'?'36px':'28px';
+    var fs=m.quality==='high'?'11px':'10px';
+    var bd=m.fixedSchedule?'3px solid #ffd700':(m.firstCoop?'3px dashed #00b894':'none');
+    var lbl=(m.quality==='high'?'⭐':'')+(m.firstCoop?'🆕':'')+(m.fixedSchedule?'📌':'');
+    var cnt='<div style="background:'+c+';color:#fff;width:'+sz+';height:'+sz
+      +';border-radius:50%;display:flex;align-items:center;justify-content:center'
+      +';font-size:'+fs+';box-shadow:0 2px 6px rgba(0,0,0,0.3);border:'+bd
+      +';cursor:pointer;position:relative">'+m.name.slice(0,m.quality==='high'?2:1)
+      +(lbl?'<span style="position:absolute;top:-6px;right:-8px;font-size:10px">'+lbl+'</span>':'')
+      +'</div>';
+    var mk=new AMap.Marker({position:[parseFloat(m.lng),parseFloat(m.lat)],content:cnt,
+      offset:new AMap.Pixel(m.quality==='high'?-18:-14,m.quality==='high'?-18:-14),zIndex:m.quality==='high'?120:100,title:m.name});
+    (function(mall){mk.on('click',function(){
+      if(activeTool==='route'){ handleRoutePick(parseFloat(mall.lng), parseFloat(mall.lat)); return; }
+      showInfoWindow(mall);
+      highlightMallInList(mall.id);
+    });})(m);
+    mk.setMap(map);
+  });
+}
+
+function showInfoWindow(mall) {
+  var h='<div class="info-card"><h4>'+esc(mall.name)+'</h4>'
+    +'<div class="row"><span class="lbl">区域</span><span>'+mall.district+'</span></div>'
+    +'<div class="row"><span class="lbl">地址</span><span>'+esc(mall.address)+'</span></div>'
+    +'<div class="row"><span class="lbl">场地</span><span>'+(VENUE_LABELS[mall.venueType]||'室内')+'</span></div>'
+    +'<div class="row"><span class="lbl">已合作次数</span><span>'+mall.coopCount+'次</span></div>'
+    +(mall.fixedSchedule?'<div class="row"><span class="lbl">固定排期</span><span style="color:#6c5ce7;font-weight:600">'+mall.fixedSchedule+'</span></div>':'')
+    +(mall.scheduledDatesList && mall.scheduledDatesList.length ? '<div class="row"><span class="lbl">已定排期</span><span style="color:#00b894;font-weight:600">'+mall.scheduledDatesList.map(fmtRange).join('、')+'</span></div>' : '')
+    +(mall.quality==='high'?'<div class="row"><span class="lbl">评级</span><span>⭐优质</span></div>':'')
+    +(mall.firstCoop?'<div class="row"><span class="lbl">状态</span><span>🆕首次</span></div>':'')
+    +(mall.notes?'<div>📝 '+esc(mall.notes)+'</div>':'')
+    +'<div class="iw-weather" id="iwWeather">天气加载中...</div>'
+    +'</div>';
+  new AMap.InfoWindow({content:h,offset:new AMap.Pixel(0,-20)}).open(map,[parseFloat(mall.lng),parseFloat(mall.lat)]);
+
+  // 获取该商场所在区域的天气
+  fetchWeather(parseFloat(mall.lat), parseFloat(mall.lng), mall.district, mall.id);
+}
+
+// ==================== 天气（AMap.Weather 高德天气插件） ====================
+var weatherCache = {};
+function fetchWeather(lat, lng, label, mallId) {
+  var isMallWeather = !!mallId;
+  var cityName = label || '北京';
+  if (weatherCache[cityName]) { displayWeather(weatherCache[cityName], label, isMallWeather); return; }
+  if (typeof AMap === 'undefined' || !AMap.Weather) { showWeatherError(label); return; }
+  var weather = new AMap.Weather();
+  weather.getLive(cityName, function(err, data) {
+    if (err || !data) { console.warn('天气获取失败', err); showWeatherError(label); return; }
+    var result = { temp: data.temperature, desc: data.weather, wind: (data.windDirection||'') + (data.windPower? ' '+data.windPower+'级':'') };
+    weatherCache[cityName] = result;
+    displayWeather(result, label, isMallWeather);
+  });
+}
+
+function showWeatherError(label) {
+  var panel = document.getElementById('weather');
+  if (panel) panel.innerHTML = '<div class="wtitle">'+(label||'北京')+'</div><div class="desc">天气加载失败</div>';
+  var iw = document.getElementById('iwWeather');
+  if (iw) iw.textContent = '🌤 '+(label||'')+' 天气加载失败';
+}
+
+function displayWeather(w, label, isMall) {
+  var panel = document.getElementById('weather');
+  if (panel) {
+    panel.innerHTML = '<div class="wtitle">' + (label||'北京') + '</div>'
+      + '<div class="temp">' + w.temp + '°</div>'
+      + '<div class="desc">' + w.desc + (w.wind ? ' | ' + w.wind : '') + '</div>';
+  }
+  var iw = document.getElementById('iwWeather');
+  if (iw) {
+    iw.textContent = '🌤 ' + label + ' ' + w.temp + '° ' + w.desc + (w.wind ? ' ' + w.wind : '');
+  }
+  lastWeatherMallId = isMall ? label : null;
+}
+
+// ==================== 测距 ====================
+function deactivateTools(keepRouteMarkers) {
+  if (measureTool) { measureTool.close(); measureTool = null; }
+  if (routeClickHandler) { map.off('click', routeClickHandler); routeClickHandler = null; }
+  if (!keepRouteMarkers) {
+    routeMarkersTemp.forEach(function(m) { m.setMap(null); });
+    routeMarkersTemp = [];
+  }
+  activeTool = null;
+  document.getElementById('btnStraight').classList.remove('active-tool');
+  document.getElementById('btnRoute').classList.remove('active-tool');
+}
+
+function measureStraight() {
+  if (activeTool === 'straight') { deactivateTools(); return; }
+  deactivateTools(); clearAllLines();
+  AMap.plugin('AMap.MouseTool', function() {
+    measureTool = new AMap.MouseTool(map);
+    measureTool.rule({
+      startMarkerOptions:{icon:'https://webapi.amap.com/theme/v1.3/markers/n/start.png'},
+      endMarkerOptions:{icon:'https://webapi.amap.com/theme/v1.3/markers/n/end.png'}
+    });
+    measureTool.on('draw', function(e) { measurePath.push(e.obj); });
+    activeTool = 'straight';
+    document.getElementById('btnStraight').classList.add('active-tool');
+  });
+}
+
+var routeStep = 0;
+var routeStartLng = 0, routeStartLat = 0;
+
+function handleRoutePick(lng, lat) {
+  if (activeTool !== 'route') return;
+  routeStep++;
+  if (routeStep === 1) {
+    routeStartLng = lng; routeStartLat = lat;
+    var m1 = new AMap.Marker({position:[lng,lat],icon:'https://webapi.amap.com/theme/v1.3/markers/n/start.png',offset:new AMap.Pixel(-12,-32),map:map,zIndex:300});
+    routeMarkersTemp.push(m1);
+    showRouteResult('📍 已选起点，点击<b>终点</b>');
+  } else if (routeStep === 2) {
+    var m2 = new AMap.Marker({position:[lng,lat],icon:'https://webapi.amap.com/theme/v1.3/markers/n/end.png',offset:new AMap.Pixel(-12,-32),map:map,zIndex:300});
+    routeMarkersTemp.push(m2);
+    calcDrivingRoute(routeStartLng, routeStartLat, lng, lat);
+    if (routeClickHandler) { map.off('click', routeClickHandler); routeClickHandler = null; }
+    deactivateTools(true);
+    routeStep = 0;
+  }
+}
+
+function measureRoute() {
+  if (activeTool === 'route') { deactivateTools(); hideRouteResult(); return; }
+  deactivateTools(); clearAllLines();
+  routeStep = 0;
+  showRouteResult('📍 点击地图或商场标记选<b>起点</b>');
+  activeTool = 'route';
+  document.getElementById('btnRoute').classList.add('active-tool');
+  routeMarkersTemp = [];
+  routeClickHandler = function(e) { handleRoutePick(e.lnglat.getLng(), e.lnglat.getLat()); };
+  map.on('click', routeClickHandler);
+}
+
+function clearAllLines() {
+  measurePath.forEach(function(p){p.setMap(null);}); measurePath=[];
+  routePolylines.forEach(function(p){p.setMap(null);}); routePolylines=[];
+  if (drivingObj) { try { drivingObj.clear(); } catch(e){} drivingObj=null; }
+}
+function showRouteResult(h){var el=document.getElementById('routeResult');el.innerHTML=h;el.classList.add('show');}
+function hideRouteResult(){document.getElementById('routeResult').classList.remove('show');}
+function clearMeasure(){clearAllLines();hideRouteResult();routeMarkersTemp.forEach(function(m){m.setMap(null);});routeMarkersTemp=[];deactivateTools();}
+function fitAll(){map.setZoomAndCenter(11,[116.4074,39.9042]);}
+
+// ==================== 节假日（国务院官方公告，逐年录入） ====================
+// 紧凑规格：off=放假区间[起,止,名称]，work=调休上班日
+var HOLIDAY_SPEC = {
+  2025: {
+    off: [['2025-01-01','2025-01-01','元旦'],['2025-01-28','2025-02-04','春节'],
+          ['2025-04-04','2025-04-06','清明'],['2025-05-01','2025-05-05','劳动节'],
+          ['2025-05-31','2025-06-02','端午'],['2025-10-01','2025-10-08','国庆中秋']],
+    work: ['2025-01-26','2025-02-08','2025-04-27','2025-09-28','2025-10-11']
+  },
+  2026: {
+    off: [['2026-01-01','2026-01-03','元旦'],['2026-02-15','2026-02-23','春节'],
+          ['2026-04-04','2026-04-06','清明'],['2026-05-01','2026-05-05','劳动节'],
+          ['2026-06-19','2026-06-21','端午'],['2026-09-25','2026-09-27','中秋'],
+          ['2026-10-01','2026-10-07','国庆']],
+    work: ['2026-01-04','2026-02-14','2026-02-28','2026-05-09','2026-09-20','2026-10-10']
+  }
+};
+// 展开成 日期 -> {n名称, h(true放假/false上班)}
+var HOLIDAYS_CN = (function(){
+  var map = {};
+  function addDays(s,e,name){
+    var d = new Date(s+'T00:00:00'), end = new Date(e+'T00:00:00');
+    while (d <= end){
+      var ds = d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+      map[ds] = {n:name, h:true};
+      d.setDate(d.getDate()+1);
+    }
+  }
+  for (var y in HOLIDAY_SPEC){
+    HOLIDAY_SPEC[y].off.forEach(function(o){ addDays(o[0],o[1],o[2]); });
+    HOLIDAY_SPEC[y].work.forEach(function(w){ map[w] = {n:'调休', h:false}; });
+  }
+  return map;
+})();
+
+// ==================== 节气（寿星公式，覆盖 2000-2099 任意年份） ====================
+var SOLAR_TERMS = [
+  ['小寒',1,5.4055],['大寒',1,20.12],['立春',2,3.87],['雨水',2,18.73],
+  ['惊蛰',3,5.63],['春分',3,20.646],['清明',4,4.81],['谷雨',4,20.1],
+  ['立夏',5,5.52],['小满',5,21.04],['芒种',6,5.678],['夏至',6,21.37],
+  ['小暑',7,7.108],['大暑',7,22.83],['立秋',8,7.5],['处暑',8,23.13],
+  ['白露',9,7.646],['秋分',9,23.042],['寒露',10,8.318],['霜降',10,23.438],
+  ['立冬',11,7.438],['小雪',11,22.36],['大雪',12,7.18],['冬至',12,21.94]
+];
+function getSolarTerm(ds){
+  var p = ds.split('-'), y=+p[0], m=+p[1], d=+p[2];
+  if (y<2000 || y>2099) return '';
+  var Y = y-2000;
+  for (var i=0;i<SOLAR_TERMS.length;i++){
+    var t = SOLAR_TERMS[i];
+    if (t[1] !== m) continue;
+    var day = Math.floor(Y*0.2422 + t[2]) - Math.floor(Y/4);
+    if (day === d) return t[0];
+  }
+  return '';
+}
+
+// ==================== 农历（数据经 lunardate 库校验，2017-2045 零误差） ====================
+var LUNAR_DATA = {"2017":{"ny":"2017-01-28","leap":6,"lens":[29,30,29,30,29,29,30,29,30,29,30,30,30]},"2018":{"ny":"2018-02-16","leap":0,"lens":[29,30,29,30,29,29,30,29,30,29,30,30]},"2019":{"ny":"2019-02-05","leap":0,"lens":[30,29,30,29,30,29,29,30,29,29,30,30]},"2020":{"ny":"2020-01-25","leap":4,"lens":[29,30,30,30,29,30,29,29,30,29,30,29,30]},"2021":{"ny":"2021-02-12","leap":0,"lens":[29,30,30,29,30,29,30,29,30,29,30,29]},"2022":{"ny":"2022-02-01","leap":0,"lens":[30,29,30,29,30,30,29,30,29,30,29,30]},"2023":{"ny":"2023-01-22","leap":2,"lens":[29,30,29,29,30,30,29,30,30,29,30,29,30]},"2024":{"ny":"2024-02-10","leap":0,"lens":[29,30,29,29,30,29,30,30,29,30,30,29]},"2025":{"ny":"2025-01-29","leap":6,"lens":[30,29,30,29,29,30,29,30,29,30,30,30,29]},"2026":{"ny":"2026-02-17","leap":0,"lens":[30,29,30,29,29,30,29,29,30,30,30,29]},"2027":{"ny":"2027-02-06","leap":0,"lens":[30,30,29,30,29,29,30,29,29,30,30,29]},"2028":{"ny":"2028-01-26","leap":5,"lens":[30,30,30,29,30,29,29,30,29,29,30,30,29]},"2029":{"ny":"2029-02-13","leap":0,"lens":[30,30,29,30,29,30,29,30,29,29,30,30]},"2030":{"ny":"2030-02-03","leap":0,"lens":[29,30,29,30,30,29,30,29,30,29,30,29]},"2031":{"ny":"2031-01-23","leap":3,"lens":[29,30,30,29,30,29,30,30,29,30,29,30,29]},"2032":{"ny":"2032-02-11","leap":0,"lens":[30,29,29,30,29,30,30,29,30,30,29,30]},"2033":{"ny":"2033-01-31","leap":11,"lens":[29,30,29,29,30,29,30,29,30,30,30,29,30]},"2034":{"ny":"2034-02-19","leap":0,"lens":[29,30,29,29,30,29,30,29,30,30,29,30]},"2035":{"ny":"2035-02-08","leap":0,"lens":[30,29,30,29,29,30,29,29,30,30,29,30]},"2036":{"ny":"2036-01-28","leap":6,"lens":[30,30,29,30,29,29,30,29,29,30,29,30,30]},"2037":{"ny":"2037-02-15","leap":0,"lens":[30,30,29,30,29,29,30,29,29,30,29,30]},"2038":{"ny":"2038-02-04","leap":0,"lens":[30,30,29,30,29,30,29,30,29,29,30,29]},"2039":{"ny":"2039-01-24","leap":5,"lens":[30,30,29,30,30,29,30,29,30,29,30,29,29]},"2040":{"ny":"2040-02-12","leap":0,"lens":[30,29,30,30,29,30,29,30,30,29,30,29]},"2041":{"ny":"2041-02-01","leap":0,"lens":[29,30,29,30,29,30,30,29,30,30,29,30]},"2042":{"ny":"2042-01-22","leap":2,"lens":[29,30,29,29,30,29,30,29,30,30,29,30,30]},"2043":{"ny":"2043-02-10","leap":0,"lens":[29,30,29,29,30,29,29,30,30,29,30,30]},"2044":{"ny":"2044-01-30","leap":7,"lens":[30,29,30,29,29,30,29,29,30,29,30,30,30]},"2045":{"ny":"2045-02-17","leap":0,"lens":[30,29,30,29,29,30,29,29,30,29,30,30]}};
+var LUNAR_MONTHS = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+function lunarDayName(d){
+  var digits=['','一','二','三','四','五','六','七','八','九','十'];
+  if(d===10) return '初十';
+  if(d===20) return '二十';
+  if(d===30) return '三十';
+  if(d<10) return '初'+digits[d];
+  if(d<20) return '十'+digits[d-10];
+  return '廿'+digits[d-20];
+}
+function solarToLunar(ds){
+  var t = new Date(ds+'T00:00:00').getTime();
+  for (var y in LUNAR_DATA){
+    var ny = new Date(LUNAR_DATA[y].ny+'T00:00:00').getTime();
+    var ny1 = LUNAR_DATA[(+y+1)] ? new Date(LUNAR_DATA[(+y+1)].ny+'T00:00:00').getTime() : Infinity;
+    if (t>=ny && t<ny1){
+      var offset = Math.round((t-ny)/86400000);
+      var lens=LUNAR_DATA[y].lens, leap=LUNAR_DATA[y].leap, idx=0;
+      while (offset >= lens[idx]){ offset-=lens[idx]; idx++; }
+      var month, isLeap=false;
+      if (leap===0) month=idx+1;
+      else if (idx<leap) month=idx+1;
+      else if (idx===leap){ month=leap; isLeap=true; }
+      else month=idx;
+      return { month:month, day:offset+1, isLeap:isLeap };
+    }
+  }
+  return null;
+}
+function lunarSubText(ds){
+  var l = solarToLunar(ds);
+  if (!l) return '';
+  if (l.day===1) return (l.isLeap?'闰':'')+LUNAR_MONTHS[l.month-1]+'月';
+  return lunarDayName(l.day);
+}
+
+// ==================== 日历 ====================
+var calYear = new Date().getFullYear();
+var calMonth = new Date().getMonth();
+var calSelected = null;
+
+function openCalModal() {
+  calYear = new Date().getFullYear();
+  calMonth = new Date().getMonth();
+  calSelected = null;
+  cancelAddPast();
+  cancelNoteEdit();
+  renderCalendar();
+  document.getElementById('calModalOverlay').classList.add('show');
+}
+function closeCalModal() { document.getElementById('calModalOverlay').classList.remove('show'); }
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+function calToday() { calYear = new Date().getFullYear(); calMonth = new Date().getMonth(); renderCalendar(); }
+function openJumpPicker() {
+  var inp = document.getElementById('calJumpDate');
+  inp.value = calSelected || new Date().toISOString().slice(0,10);
+  if (inp.showPicker) { try { inp.showPicker(); return; } catch(e){} }
+  // 兜底：临时显形并聚焦
+  inp.style.pointerEvents = 'auto';
+  inp.focus();
+  inp.click();
+}
+function jumpToDate(ds) {
+  if (!ds || !/^\d{4}-\d{2}-\d{2}$/.test(ds)) return;
+  calYear = parseInt(ds.slice(0,4), 10);
+  calMonth = parseInt(ds.slice(5,7), 10) - 1;
+  calSelected = ds;
+  renderCalendar();
+}
+
+function pad2(n) { return n<10?'0'+n:''+n; }
+function dateStrOf(y,m,d) { return y+'-'+pad2(m+1)+'-'+pad2(d); }
+
+function getEventsOnDate(dateStr) {
+  var events = [];
+  allMalls.forEach(function(m) {
+    (m.scheduledDatesList || []).forEach(function(r, ri) {
+      if (r.start && dateStr >= r.start && dateStr <= (r.end || r.start)) {
+        events.push({ mall: m.name, mallId: m.id, range: r, rangeIndex: ri });
+      }
+    });
+  });
+  return events;
+}
+function getPastOnDate(dateStr) {
+  return pastActivities.filter(function(p) { return p.date === dateStr; });
+}
+
+function renderCalendar() {
+  document.getElementById('calMonthTitle').textContent = calYear + '年 ' + (calMonth + 1) + '月';
+  var grid = document.getElementById('calGrid');
+  var dows = ['一','二','三','四','五','六','日']; // 周日挪到最右
+  var html = '';
+  dows.forEach(function(d, i){
+    var sundayCls = (i === 6) ? ' dow-sun' : '';
+    html += '<div class="cal-cell dow'+sundayCls+'">'+d+'</div>';
+  });
+
+  var firstJsDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  var firstOffset = (firstJsDay + 6) % 7; // 周一为 0
+  var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  var today = new Date();
+  var todayStr = dateStrOf(today.getFullYear(), today.getMonth(), today.getDate());
+
+  for (var i = 0; i < firstOffset; i++) html += '<div class="cal-cell empty"></div>';
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = dateStrOf(calYear, calMonth, d);
+    var ev = getEventsOnDate(ds);
+    var pa = getPastOnDate(ds);
+    var hol = HOLIDAYS_CN[ds];
+    var term = getSolarTerm(ds);
+
+    // 颜色优先级：今天+有活动=绿；今天=蓝；有活动=红；过往=黄
+    var cls = 'cal-cell';
+    if (ds === todayStr && ev.length) cls += ' today-event';
+    else if (ds === todayStr) cls += ' is-today';
+    else if (ev.length) cls += ' has-event';
+    else if (pa.length) cls += ' has-past';
+    if (ds === calSelected) cls += ' selected';
+
+    var sub;
+    if (hol) sub = '<div class="cal-sub '+(hol.h?'hol':'wd')+'">'+(hol.h?'休':'班')+'</div>';
+    else if (term) sub = '<div class="cal-sub term">'+term+'</div>';
+    else sub = '<div class="cal-sub lunar">'+lunarSubText(ds)+'</div>';
+    var noteMark = notesOf(ds).length ? '<span class="cal-note-mark" title="有备注">📝</span>' : '';
+
+    html += '<div class="' + cls + '" onclick="selectCalDate(\'' + ds + '\')">';
+    html += '<div class="cal-num">' + d + '</div>';
+    html += sub;
+    html += noteMark;
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+  if (calSelected) selectCalDate(calSelected);
+  else document.getElementById('calDetail').innerHTML = '点击日期查看当天详情';
+}
+
+function selectCalDate(ds) {
+  calSelected = ds;
+  document.querySelectorAll('#calGrid .cal-cell').forEach(function(el){ el.classList.remove('selected'); });
+  var cells = document.querySelectorAll('#calGrid .cal-cell');
+  for (var i=0;i<cells.length;i++) { if (cells[i].getAttribute('onclick') && cells[i].getAttribute('onclick').indexOf(ds)>=0) { cells[i].classList.add('selected'); break; } }
+
+  var ev = getEventsOnDate(ds);
+  var pa = getPastOnDate(ds);
+  var notes = notesOf(ds);
+  var hol = HOLIDAYS_CN[ds];
+  var term = getSolarTerm(ds);
+  var h = '<strong style="color:#3498db">' + ds + '</strong>';
+  if (hol) h += ' <span style="font-size:11px;padding:1px 6px;border-radius:4px;color:#fff;background:'+(hol.h?'#e74c3c':'#fd7e14')+'">'+hol.n+(hol.h?' 放假':' 调休上班')+'</span>';
+  if (term) h += ' <span style="font-size:11px;color:#3498db">·'+term+'</span>';
+
+  function rowBtns(editCall, delCall){
+    return '<span class="cd-acts">'
+      + '<button class="cd-btn" title="编辑" onclick="'+editCall+'">✏️</button>'
+      + '<button class="cd-btn cd-del" title="删除" onclick="'+delCall+'">🗑</button></span>';
+  }
+
+  // 已排活动
+  if (ev.length) {
+    h += '<div class="cd-group"><div class="cd-title" style="color:#c0392b">已排活动</div>';
+    ev.forEach(function(e){
+      h += '<div class="cd-row"><span class="cd-text">'+esc(e.mall)+'（'+fmtRange(e.range)+'）</span>'
+        + rowBtns("editScheduled('"+e.mallId+"')", "delScheduled('"+e.mallId+"',"+e.rangeIndex+")") + '</div>';
+    });
+    h += '</div>';
+  }
+  // 过往活动
+  if (pa.length) {
+    h += '<div class="cd-group"><div class="cd-title" style="color:#a07000">过往活动</div>';
+    pa.forEach(function(p){
+      var i = pastActivities.indexOf(p);
+      h += '<div class="cd-row"><span class="cd-text">'+esc(p.location)+(p.notes?'（'+esc(p.notes)+'）':'')+'</span>'
+        + rowBtns("editPast("+i+")", "delPast("+i+")") + '</div>';
+    });
+    h += '</div>';
+  }
+  if (!ev.length && !pa.length && !notes.length) {
+    h += '<div style="color:var(--muted);margin-top:6px">本日无记录</div>';
+  }
+  // 活动块的添加按钮（紧跟活动）
+  h += '<div style="margin-top:8px"><button onclick="addPastActivity(\''+ds+'\')" style="font-size:12px;color:#3498db;background:none;border:none;cursor:pointer;padding:0">＋ 添加过往活动</button></div>';
+
+  // —— 间隔 —— 备注块
+  h += '<div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px">';
+  if (notes.length) {
+    h += '<div class="cd-group" style="margin-top:0"><div class="cd-title" style="color:#7ba7d6">📝 备注</div>';
+    notes.forEach(function(t, ni){
+      h += '<div class="cd-row"><span class="cd-text" style="white-space:pre-wrap">'+esc(t)+'</span>'
+        + rowBtns("editNote('"+ds+"',"+ni+")", "delNote('"+ds+"',"+ni+")") + '</div>';
+    });
+    h += '</div>';
+  }
+  h += '<div style="margin-top:8px"><button onclick="addNote(\''+ds+'\')" style="font-size:12px;color:#3498db;background:none;border:none;cursor:pointer;padding:0">＋ 添加备注</button></div>';
+  h += '</div>';
+  document.getElementById('calDetail').innerHTML = h;
+}
+
+// ===== 备注（多条，内嵌面板编辑）=====
+var editingNote = null;   // {ds, ni}，ni===null 表示新增
+function openNotePanel() {
+  cancelAddPast();
+  var panel = document.getElementById('noteEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); document.getElementById('noteText').focus(); }, 60);
+}
+function addNote(ds) {
+  editingNote = { ds: ds, ni: null };
+  document.getElementById('noteEditTitle').textContent = '添加备注';
+  document.getElementById('noteText').value = '';
+  openNotePanel();
+}
+function editNote(ds, ni) {
+  var arr = dayNotes[ds]; if (!arr || arr[ni] == null) return;
+  editingNote = { ds: ds, ni: ni };
+  document.getElementById('noteEditTitle').textContent = '编辑备注';
+  document.getElementById('noteText').value = arr[ni];
+  openNotePanel();
+}
+function cancelNoteEdit() { document.getElementById('noteEditPanel').classList.remove('show'); editingNote = null; }
+function saveNoteEdit() {
+  if (!editingNote) return;
+  var ds = editingNote.ds, ni = editingNote.ni;
+  var v = document.getElementById('noteText').value.trim();
+  if (!v) { alert('请输入备注内容（如要删除请用 🗑）'); return; }
+  if (!dayNotes[ds]) dayNotes[ds] = [];
+  if (ni === null) dayNotes[ds].push(v); else dayNotes[ds][ni] = v;
+  saveDayNotes();
+  cancelNoteEdit();
+  renderCalendar();
+}
+function delNote(ds, ni) {
+  var arr = dayNotes[ds]; if (!arr) return;
+  if (!confirm('删除这条备注？')) return;
+  arr.splice(ni, 1);
+  if (!arr.length) delete dayNotes[ds];
+  saveDayNotes(); renderCalendar();
+}
+
+// ===== 已排活动 编辑/删除 =====
+function editScheduled(mallId) {
+  closeCalModal();
+  openEditModal(mallId);   // 排期挂在场地下，打开该场地编辑表单
+}
+function delScheduled(mallId, rangeIndex) {
+  var m = allMalls.find(function(x){return x.id===mallId;});
+  if (!m || !m.scheduledDatesList || !m.scheduledDatesList[rangeIndex]) return;
+  var r = m.scheduledDatesList[rangeIndex];
+  if (!confirm('删除 ' + m.name + ' 的这条排期（' + fmtRange(r) + '）？')) return;
+  m.scheduledDatesList.splice(rangeIndex, 1);
+  saveData(); renderAll(); renderCalendar();
+}
+
+var editingPastIdx = null;
+function addPastActivity(presetDate) {
+  cancelNoteEdit();
+  editingPastIdx = null;
+  document.querySelector('#pastEditPanel h4').textContent = '添加过往活动';
+  document.getElementById('pastDate').value = presetDate || calSelected || new Date().toISOString().slice(0,10);
+  document.getElementById('pastLocation').value = '';
+  document.getElementById('pastNotes').value = '';
+  var dl = document.getElementById('venueDataList');
+  dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
+  var panel = document.getElementById('pastEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); document.getElementById('pastLocation').focus(); }, 60);
+}
+function editPast(idx) {
+  var p = pastActivities[idx]; if (!p) return;
+  cancelNoteEdit();
+  editingPastIdx = idx;
+  document.querySelector('#pastEditPanel h4').textContent = '编辑过往活动';
+  document.getElementById('pastDate').value = p.date;
+  document.getElementById('pastLocation').value = p.location;
+  document.getElementById('pastNotes').value = p.notes || '';
+  var dl = document.getElementById('venueDataList');
+  dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
+  var panel = document.getElementById('pastEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 60);
+}
+function cancelAddPast() { document.getElementById('pastEditPanel').classList.remove('show'); editingPastIdx = null; }
+function savePastActivity() {
+  var date = document.getElementById('pastDate').value;
+  var location = document.getElementById('pastLocation').value.trim();
+  var notes = document.getElementById('pastNotes').value.trim();
+  if (!date) { alert('请选择日期'); return; }
+  if (!location) { alert('请填写地点'); return; }
+  if (editingPastIdx !== null && pastActivities[editingPastIdx]) {
+    pastActivities[editingPastIdx] = { date: date, location: location, notes: notes };
+  } else {
+    pastActivities.push({ date: date, location: location, notes: notes });
+  }
+  savePastActivities();
+  cancelAddPast();
+  calSelected = date;
+  var y = parseInt(date.slice(0,4), 10);
+  var m = parseInt(date.slice(5,7), 10) - 1;
+  if (y !== calYear || m !== calMonth) { calYear = y; calMonth = m; }
+  renderCalendar();
+}
+
+function delPast(idx) {
+  if (!confirm('确认删除这条过往活动记录？')) return;
+  pastActivities.splice(idx, 1);
+  savePastActivities();
+  renderCalendar();
+}
+
+// ==================== 时钟 ====================
+function updateClock() {
+  document.getElementById('clock').textContent = '📅 ' + new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+}
+
+// ==================== 📌 Badge 可编辑 + 多行滚动 ====================
+var badgeScrollTimers = [];
+var badgeScrollToken = 0;
+function clearBadgeAnimation() {
+  badgeScrollToken++;            // 旧链全部作废
+  badgeScrollTimers.forEach(clearTimeout);
+  badgeScrollTimers = [];
+}
+function badgeTimeout(fn, ms, token) {
+  var id = setTimeout(function(){ if (token === badgeScrollToken) fn(); }, ms);
+  badgeScrollTimers.push(id);
+  return id;
+}
+
+function measureTextWidth(text, fontStyle) {
+  var m = document.createElement('span');
+  m.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:11px;font-family:inherit;';
+  m.textContent = text;
+  document.body.appendChild(m);
+  var w = m.offsetWidth;
+  document.body.removeChild(m);
+  return w;
+}
+
+function updateFixedBadge() {
+  clearBadgeAnimation();
+  var badge = document.getElementById('fixedBadge');
+  var raw = '';
+  if (customBadge) {
+    raw = customBadge;
+  } else {
+    var fm = allMalls.filter(function(m){return m.fixedSchedule && m.fixedSchedule!=='独立排期';});
+    if (fm.length) raw = fm.map(function(m){return m.name.split('（')[0]+' '+m.fixedSchedule;}).join('\n');
+    else raw = '点击编辑';
+  }
+  var lines = raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
+  if (!lines.length) lines = ['点击编辑'];
+
+  var maxW = 0;
+  lines.forEach(function(l){ var w = measureTextWidth(l); if (w > maxW) maxW = w; });
+
+  if (lines.length === 1) {
+    badge.innerHTML = '<span class="badge-icon">📌</span><span class="badge-static">' + esc(lines[0]) + '</span>';
+  } else {
+    badge.innerHTML = '<span class="badge-icon">📌</span><span class="badge-scroll-area" style="width:' + maxW + 'px"><span class="badge-text-line" id="badgeScrollA"></span><span class="badge-text-line" id="badgeScrollB"></span></span>';
+    runBadgeScroll(lines, maxW);
+  }
+  badge.classList.add('editable');
+  badge.title = '点击编辑（支持多行，每行依次滚动播放）';
+}
+
+function runBadgeScroll(lines, areaW) {
+  var elA = document.getElementById('badgeScrollA');
+  var elB = document.getElementById('badgeScrollB');
+  if (!elA || !elB) return;
+  var SPEED = 40;       // 像素/秒
+  var GAP_PX = 55;      // 上一行开始外滚后多走约 5 个字，下一行才进场
+  var token = badgeScrollToken;   // 本次运行的代次令牌
+
+  function playOn(el, text, onTriggerNext) {
+    el.textContent = text;
+    el.style.transition = 'none';
+    el.style.transform = 'translateX(' + areaW + 'px)';
+    void el.offsetWidth;
+    var textW = el.offsetWidth;
+
+    // 进场：从右滚到 translateX(0)
+    var inDur = areaW / SPEED;
+    el.style.transition = 'transform ' + inDur.toFixed(2) + 's linear';
+    el.style.transform = 'translateX(0px)';
+
+    badgeTimeout(function() {
+      // 完整展示 10 秒
+      badgeTimeout(function() {
+        // 开始外滚
+        var outDur = textW / SPEED;
+        el.style.transition = 'transform ' + outDur.toFixed(2) + 's linear';
+        el.style.transform = 'translateX(' + (-textW) + 'px)';
+        // 错位约 5 字距离后触发下一行
+        badgeTimeout(onTriggerNext, (GAP_PX / SPEED) * 1000, token);
+      }, 10000, token);
+    }, inDur * 1000 + 50, token);
+  }
+
+  var idx = 0;
+  function step(useA) {
+    idx = (idx + 1) % lines.length;
+    var el = useA ? elA : elB;
+    playOn(el, lines[idx], function(){ step(!useA); });
+  }
+
+  // 起手 line 0 在 A 上
+  playOn(elA, lines[0], function(){ step(false); });
+}
+
+function openBadgeModal() {
+  document.getElementById('badgeTextarea').value = customBadge || '';
+  document.getElementById('badgeModalOverlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('badgeTextarea').focus(); }, 100);
+}
+function closeBadgeModal() { document.getElementById('badgeModalOverlay').classList.remove('show'); }
+function saveBadgeText() {
+  customBadge = document.getElementById('badgeTextarea').value.trim();
+  saveBadge(customBadge);
+  closeBadgeModal();
+  updateFixedBadge();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('fixedBadge').addEventListener('click', openBadgeModal);
+  // 点击下拉菜单以外区域时收起
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#sortDD')) closeSortMenu();
+  });
+});
+
+// ==================== MODAL ====================
+function openAddModal() { editingId=null; document.getElementById('modalTitle').textContent='添加商场'; document.getElementById('btnDelete').style.display='none'; clearForm(); document.getElementById('modalOverlay').classList.add('show'); }
+function openEditModal(id) { var m=allMalls.find(function(x){return x.id===id}); if(!m)return; editingId=id; document.getElementById('modalTitle').textContent='编辑 '+m.name; document.getElementById('btnDelete').style.display='inline-block'; fillForm(m); document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); editingId=null; }
+function renderScheduledRows(list) {
+  if (!list || !list.length) list = [{ start:'', end:'' }];
+  var html = '';
+  list.forEach(function(r, i) {
+    html += '<div class="sched-row">';
+    html += '<div><span>开始</span><input type="date" class="sched-start" value="'+(r.start||'')+'"></div>';
+    html += '<div><span>结束（连续2天）</span><input type="date" class="sched-end" value="'+(r.end||'')+'"></div>';
+    html += '<button type="button" class="sched-remove" onclick="removeScheduleRow(this)" title="删除此排期">−</button>';
+    html += '</div>';
+  });
+  html += '<button type="button" class="sched-add" onclick="addScheduleRow()">＋ 添加一条排期</button>';
+  document.getElementById('scheduledRows').innerHTML = html;
+}
+function addScheduleRow() {
+  var cur = collectScheduledList(true);
+  cur.push({ start:'', end:'' });
+  renderScheduledRows(cur);
+}
+function removeScheduleRow(btn) {
+  var rows = document.querySelectorAll('.sched-row');
+  if (rows.length <= 1) {
+    btn.closest('.sched-row').querySelector('.sched-start').value = '';
+    btn.closest('.sched-row').querySelector('.sched-end').value = '';
+    return;
+  }
+  btn.closest('.sched-row').remove();
+}
+function collectScheduledList(keepEmpty) {
+  var list = [];
+  document.querySelectorAll('.sched-row').forEach(function(row) {
+    var s = row.querySelector('.sched-start').value;
+    var e = row.querySelector('.sched-end').value;
+    if (s) list.push({ start: s, end: e || s });
+    else if (keepEmpty) list.push({ start:'', end:'' });
+  });
+  return list;
+}
+function clearForm() {
+  var ids=['fName','fDistrict','fAddress','fLng','fLat'];
+  ids.forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('fQuality').value='medium'; document.getElementById('fVenueType').value='indoor';
+  document.getElementById('fCoopCount').value='0'; document.getElementById('fFirstCoop').value='false';
+  document.getElementById('fFixedSchedule').value=''; document.getElementById('fNotes').value='';
+  renderScheduledRows([]);
+}
+function fillForm(m) {
+  document.getElementById('fName').value=m.name; document.getElementById('fDistrict').value=m.district;
+  document.getElementById('fAddress').value=m.address; document.getElementById('fLng').value=m.lng; document.getElementById('fLat').value=m.lat;
+  document.getElementById('fQuality').value=m.quality; document.getElementById('fVenueType').value=m.venueType||'indoor';
+  document.getElementById('fCoopCount').value=m.coopCount; document.getElementById('fFirstCoop').value=m.firstCoop?'true':'false';
+  document.getElementById('fFixedSchedule').value=m.fixedSchedule||'';
+  renderScheduledRows(m.scheduledDatesList || []);
+  document.getElementById('fNotes').value=m.notes||'';
+}
+function saveMall() {
+  var name=document.getElementById('fName').value.trim();
+  var district=document.getElementById('fDistrict').value;
+  var address=document.getElementById('fAddress').value.trim();
+  var lng=document.getElementById('fLng').value.trim();
+  var lat=document.getElementById('fLat').value.trim();
+
+  if(!name){alert('请输入商场名称');return;}
+  if(!district){alert('请选择所属区域');return;}
+  if(!lng||!lat){
+    if(!address){alert('请填写详细地址并点击"根据地址定位坐标"按钮，或手动输入经纬度。');return;}
+    alert('请点击"根据地址定位坐标"按钮获取经纬度。');
+    return;
+  }
+
+  var d = {
+    name:name, district:district, address:address, lng:lng, lat:lat,
+    quality:document.getElementById('fQuality').value,
+    venueType:document.getElementById('fVenueType').value,
+    coopCount:parseInt(document.getElementById('fCoopCount').value)||0,
+    firstCoop:document.getElementById('fFirstCoop').value==='true',
+    fixedSchedule:document.getElementById('fFixedSchedule').value||null,
+    scheduledDatesList:collectScheduledList(),
+    notes:document.getElementById('fNotes').value.trim()
+  };
+
+  if(editingId){
+    var idx=allMalls.findIndex(function(m){return m.id===editingId;});
+    if(idx>=0){for(var k in d)allMalls[idx][k]=d[k];}
+  } else {
+    allMalls.push(Object.assign({id:'mall-'+Date.now()},d));
+  }
+  saveData(); closeModal(); renderAll();
+}
+function confirmDelete(id) {
+  var m=allMalls.find(function(x){return x.id===id});
+  if(!m)return;
+  if(confirm('确定删除"'+m.name+'"？不可恢复。')){allMalls=allMalls.filter(function(x){return x.id!==id});saveData();closeModal();renderAll();}
+}
+function deleteMall(){if(editingId)confirmDelete(editingId);}
+
+// ==================== 导入/导出/重置 ====================
+function exportData() {
+  var blob=new Blob([JSON.stringify(allMalls,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='malls-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function importData(e) {
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var data=JSON.parse(ev.target.result);
+      if(!Array.isArray(data))throw new Error();
+      if(confirm('导入'+data.length+'条数据，覆盖当前？')){allMalls=data;saveData();renderAll();}
+    }catch(ex){alert('JSON格式不正确');}
+  };
+  reader.readAsText(file);e.target.value='';
+}
+function resetData() {
+  if(confirm('重置为默认数据？你的修改将丢失。')){
+    allMalls=JSON.parse(JSON.stringify(DEFAULT_DATA));saveData();customBadge='';saveBadge('');
+    updateFixedBadge();renderAll();
+  }
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('hidden');}
+</script>
+
+<script type="text/javascript">
+  window._AMapSecurityConfig = { securityJsCode: 'd144b3a232c0859ca1bccdab0651771f' };
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=0477a4bc2d60c2f38924aa9559a6cbde&plugin=AMap.MouseTool,AMap.ControlBar,AMap.AutoComplete,AMap.Geocoder,AMap.Driving,AMap.PlaceSearch,AMap.Weather&callback=initApp"></script>
+</body>
+</html>
