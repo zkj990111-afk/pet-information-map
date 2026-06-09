@@ -140,18 +140,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .cal-cell.dow.dow-sun { color:#e74c3c; }
 .cal-cell.dow:hover { background:transparent; }
 .cal-cell.empty { opacity:0; cursor:default; background:transparent; }
-.cal-cell.is-today { background:#dbeaff; color:#1d6fcb; font-weight:700; }
-.cal-cell.has-event { background:#ffe0e0; color:#c0392b; font-weight:700; }
-.cal-cell.has-past { background:#fff3c4; color:#a07000; font-weight:700; }
-.cal-cell.today-event { background:#d3f5d3; color:#1e8a3b; font-weight:700; }
-.cal-cell.selected { border-color:#3498db; box-shadow:0 0 0 2px rgba(52,152,219,0.3); }
+.cal-cell.is-today { background:#9dc4f5; color:#0b3c75; font-weight:700; }
+.cal-cell.has-event { background:#f7a8a8; color:#7a1414; font-weight:700; }
+.cal-cell.has-past { background:#f5d976; color:#6b4a00; font-weight:700; }
+.cal-cell.today-event { background:#9be0a3; color:#0f5a23; font-weight:700; }
+.cal-cell.selected { border-color:#3498db; box-shadow:0 0 0 2px rgba(52,152,219,0.35); }
 .cal-cell .cal-num { font-size:14px; line-height:1.1; }
-.cal-cell .cal-sub { font-size:9px; line-height:1.1; margin-top:1px; padding:0 2px; border-radius:3px; }
-.cal-cell .cal-sub.term { color:#3498db; }
-.cal-cell .cal-sub.hol { background:#e74c3c; color:#fff; }
-.cal-cell .cal-sub.wd { background:#fd7e14; color:#fff; }
+.cal-cell .cal-sub { font-size:8px; line-height:1.1; margin-top:1px; padding:0 2px; border-radius:3px; }
+.cal-cell .cal-sub.term { color:#2c6fb3; font-size:9px; }
+.cal-cell .cal-sub.hol { background:#e74c3c; color:#fff; padding:0 3px; transform:scale(0.85); }
+.cal-cell .cal-sub.wd { background:#fd7e14; color:#fff; padding:0 3px; transform:scale(0.85); }
 .cal-cell .cal-note-mark { position:absolute; top:2px; right:3px; font-size:9px; line-height:1; }
-.cal-detail { margin-top:14px; padding:10px; background:#fafafa; border-radius:8px; font-size:13px; min-height:60px; }
+.cal-legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; padding:0 2px; justify-content:center; font-size:11px; color:#666; }
+.cal-legend .lg-item { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.cal-legend .lg-sw { width:11px; height:11px; border-radius:3px; display:inline-block; flex:0 0 auto; }
+.cal-legend .lg-tag { display:inline-flex; align-items:center; justify-content:center; width:14px; height:13px; border-radius:3px; color:#fff; font-size:9px; flex:0 0 auto; }
+.cal-detail { margin-top:14px; padding:12px; background:#fafafa; border-radius:8px; font-size:13px; min-height:60px; }
+/* 当天详情：活动/备注行 + 操作按钮 */
+.cd-group { margin-top:10px; }
+.cd-title { font-size:12px; font-weight:600; margin-bottom:4px; }
+.cd-row { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eee; }
+.cd-row:last-child { border-bottom:none; }
+.cd-text { flex:1; min-width:0; font-size:13px; }
+.cd-acts { flex:0 0 auto; display:flex; gap:4px; }
+.cd-btn { width:26px; height:24px; border:1px solid var(--border); background:#fff; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; padding:0; }
+.cd-btn:hover { background:#f0f7ff; }
+.cd-btn.cd-del:hover { background:#fdecea; border-color:#e74c3c; }
 .cal-nav { display:flex; gap:6px; align-items:center; }
 .cal-nav button { font-size:13px; padding:4px 12px; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; }
 .cal-nav button:hover { background:#f0f0f0; }
@@ -296,13 +310,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         </div>
       </div>
       <div class="cal-grid" id="calGrid"></div>
-      <div style="display:flex;gap:10px;font-size:11px;color:var(--muted);margin-top:8px;justify-content:center;flex-wrap:wrap">
-        <span><span style="display:inline-block;width:10px;height:10px;background:#ffe0e0;border-radius:2px;vertical-align:middle"></span> 已排活动</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#fff3c4;border-radius:2px;vertical-align:middle"></span> 过往活动</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#d3f5d3;border-radius:2px;vertical-align:middle"></span> 今天有活动</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#dbeaff;border-radius:2px;vertical-align:middle"></span> 今天</span>
-        <span><span style="display:inline-block;background:#e74c3c;color:#fff;padding:0 3px;border-radius:2px;font-size:9px;vertical-align:middle">休</span> 节假日</span>
-        <span><span style="display:inline-block;background:#fd7e14;color:#fff;padding:0 3px;border-radius:2px;font-size:9px;vertical-align:middle">班</span> 调休</span>
+      <div class="cal-legend">
+        <span class="lg-item"><i class="lg-sw" style="background:#f7a8a8"></i>已排活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#f5d976"></i>过往活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9be0a3"></i>今天有活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9dc4f5"></i>今天</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#e74c3c">休</i>节假日</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#fd7e14">班</i>调休</span>
       </div>
       <div class="cal-detail" id="calDetail">点击日期查看当天详情</div>
     </div>
@@ -396,9 +410,16 @@ function savePastActivities() { localStorage.setItem(PAST_KEY, JSON.stringify(pa
 var pastActivities = loadPastActivities();
 
 var DAYNOTE_KEY = 'pet_day_notes_v1';
-function loadDayNotes() { try { return JSON.parse(localStorage.getItem(DAYNOTE_KEY) || '{}'); } catch(e) { return {}; } }
+function loadDayNotes() {
+  var raw = {};
+  try { raw = JSON.parse(localStorage.getItem(DAYNOTE_KEY) || '{}'); } catch(e) { raw = {}; }
+  // 迁移：旧版每天单条字符串 -> 数组
+  Object.keys(raw).forEach(function(k){ if (typeof raw[k] === 'string') raw[k] = raw[k] ? [raw[k]] : []; });
+  return raw;
+}
 function saveDayNotes() { localStorage.setItem(DAYNOTE_KEY, JSON.stringify(dayNotes)); }
 var dayNotes = loadDayNotes();
+function notesOf(ds){ var a = dayNotes[ds]; return (a && a.length) ? a : []; }
 
 var ORDER_KEY = 'pet_custom_order_v1';
 function loadCustomOrder() { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch(e) { return []; } }
@@ -1099,35 +1120,62 @@ function hideRouteResult(){document.getElementById('routeResult').classList.remo
 function clearMeasure(){clearAllLines();hideRouteResult();routeMarkersTemp.forEach(function(m){m.setMap(null);});routeMarkersTemp=[];deactivateTools();}
 function fitAll(){map.setZoomAndCenter(11,[116.4074,39.9042]);}
 
-// ==================== 节假日/节气数据（2026年，可按官方公告校对） ====================
-// holiday:true=放假, false=调休上班
-var HOLIDAYS_CN = {
-  '2026-01-01':{n:'元旦',h:true},
-  '2026-02-15':{n:'春节',h:true},'2026-02-16':{n:'除夕',h:true},'2026-02-17':{n:'初一',h:true},
-  '2026-02-18':{n:'初二',h:true},'2026-02-19':{n:'初三',h:true},'2026-02-20':{n:'初四',h:true},'2026-02-21':{n:'初五',h:true},
-  '2026-02-14':{n:'春节调休',h:false},'2026-02-28':{n:'春节调休',h:false},
-  '2026-04-04':{n:'清明',h:true},'2026-04-05':{n:'清明',h:true},'2026-04-06':{n:'清明',h:true},
-  '2026-05-01':{n:'劳动节',h:true},'2026-05-02':{n:'劳动节',h:true},'2026-05-03':{n:'劳动节',h:true},
-  '2026-05-04':{n:'劳动节',h:true},'2026-05-05':{n:'劳动节',h:true},'2026-04-26':{n:'劳动调休',h:false},
-  '2026-06-19':{n:'端午',h:true},'2026-06-20':{n:'端午',h:true},'2026-06-21':{n:'端午',h:true},
-  '2026-09-25':{n:'中秋',h:true},'2026-09-26':{n:'中秋',h:true},'2026-09-27':{n:'中秋',h:true},
-  '2026-10-01':{n:'国庆',h:true},'2026-10-02':{n:'国庆',h:true},'2026-10-03':{n:'国庆',h:true},
-  '2026-10-04':{n:'国庆',h:true},'2026-10-05':{n:'国庆',h:true},'2026-10-06':{n:'国庆',h:true},'2026-10-07':{n:'国庆',h:true}
+// ==================== 节假日（国务院官方公告，逐年录入） ====================
+// 紧凑规格：off=放假区间[起,止,名称]，work=调休上班日
+var HOLIDAY_SPEC = {
+  2025: {
+    off: [['2025-01-01','2025-01-01','元旦'],['2025-01-28','2025-02-04','春节'],
+          ['2025-04-04','2025-04-06','清明'],['2025-05-01','2025-05-05','劳动节'],
+          ['2025-05-31','2025-06-02','端午'],['2025-10-01','2025-10-08','国庆中秋']],
+    work: ['2025-01-26','2025-02-08','2025-04-27','2025-09-28','2025-10-11']
+  },
+  2026: {
+    off: [['2026-01-01','2026-01-03','元旦'],['2026-02-15','2026-02-23','春节'],
+          ['2026-04-04','2026-04-06','清明'],['2026-05-01','2026-05-05','劳动节'],
+          ['2026-06-19','2026-06-21','端午'],['2026-09-25','2026-09-27','中秋'],
+          ['2026-10-01','2026-10-07','国庆']],
+    work: ['2026-01-04','2026-02-14','2026-02-28','2026-05-09','2026-09-20','2026-10-10']
+  }
 };
-var SOLAR_TERMS_CN = {
-  '2026-01-05':'小寒','2026-01-20':'大寒',
-  '2026-02-04':'立春','2026-02-18':'雨水',
-  '2026-03-05':'惊蛰','2026-03-20':'春分',
-  '2026-04-05':'清明','2026-04-20':'谷雨',
-  '2026-05-05':'立夏','2026-05-21':'小满',
-  '2026-06-05':'芒种','2026-06-21':'夏至',
-  '2026-07-07':'小暑','2026-07-22':'大暑',
-  '2026-08-07':'立秋','2026-08-23':'处暑',
-  '2026-09-07':'白露','2026-09-23':'秋分',
-  '2026-10-08':'寒露','2026-10-23':'霜降',
-  '2026-11-07':'立冬','2026-11-22':'小雪',
-  '2026-12-07':'大雪','2026-12-22':'冬至'
-};
+// 展开成 日期 -> {n名称, h(true放假/false上班)}
+var HOLIDAYS_CN = (function(){
+  var map = {};
+  function addDays(s,e,name){
+    var d = new Date(s+'T00:00:00'), end = new Date(e+'T00:00:00');
+    while (d <= end){
+      var ds = d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+      map[ds] = {n:name, h:true};
+      d.setDate(d.getDate()+1);
+    }
+  }
+  for (var y in HOLIDAY_SPEC){
+    HOLIDAY_SPEC[y].off.forEach(function(o){ addDays(o[0],o[1],o[2]); });
+    HOLIDAY_SPEC[y].work.forEach(function(w){ map[w] = {n:'调休', h:false}; });
+  }
+  return map;
+})();
+
+// ==================== 节气（寿星公式，覆盖 2000-2099 任意年份） ====================
+var SOLAR_TERMS = [
+  ['小寒',1,5.4055],['大寒',1,20.12],['立春',2,3.87],['雨水',2,18.73],
+  ['惊蛰',3,5.63],['春分',3,20.646],['清明',4,4.81],['谷雨',4,20.1],
+  ['立夏',5,5.52],['小满',5,21.04],['芒种',6,5.678],['夏至',6,21.37],
+  ['小暑',7,7.108],['大暑',7,22.83],['立秋',8,7.5],['处暑',8,23.13],
+  ['白露',9,7.646],['秋分',9,23.042],['寒露',10,8.318],['霜降',10,23.438],
+  ['立冬',11,7.438],['小雪',11,22.36],['大雪',12,7.18],['冬至',12,21.94]
+];
+function getSolarTerm(ds){
+  var p = ds.split('-'), y=+p[0], m=+p[1], d=+p[2];
+  if (y<2000 || y>2099) return '';
+  var Y = y-2000;
+  for (var i=0;i<SOLAR_TERMS.length;i++){
+    var t = SOLAR_TERMS[i];
+    if (t[1] !== m) continue;
+    var day = Math.floor(Y*0.2422 + t[2]) - Math.floor(Y/4);
+    if (day === d) return t[0];
+  }
+  return '';
+}
 
 // ==================== 日历 ====================
 var calYear = new Date().getFullYear();
@@ -1169,9 +1217,9 @@ function dateStrOf(y,m,d) { return y+'-'+pad2(m+1)+'-'+pad2(d); }
 function getEventsOnDate(dateStr) {
   var events = [];
   allMalls.forEach(function(m) {
-    (m.scheduledDatesList || []).forEach(function(r) {
+    (m.scheduledDatesList || []).forEach(function(r, ri) {
       if (r.start && dateStr >= r.start && dateStr <= (r.end || r.start)) {
-        events.push({ mall: m.name, range: r });
+        events.push({ mall: m.name, mallId: m.id, range: r, rangeIndex: ri });
       }
     });
   });
@@ -1203,7 +1251,7 @@ function renderCalendar() {
     var ev = getEventsOnDate(ds);
     var pa = getPastOnDate(ds);
     var hol = HOLIDAYS_CN[ds];
-    var term = SOLAR_TERMS_CN[ds];
+    var term = getSolarTerm(ds);
 
     // 颜色优先级：今天+有活动=绿；今天=蓝；有活动=红；过往=黄
     var cls = 'cal-cell';
@@ -1216,7 +1264,7 @@ function renderCalendar() {
     var sub = '';
     if (term) sub = '<div class="cal-sub term">'+term+'</div>';
     else if (hol) sub = '<div class="cal-sub '+(hol.h?'hol':'wd')+'">'+(hol.h?'休':'班')+'</div>';
-    var noteMark = dayNotes[ds] ? '<span class="cal-note-mark" title="有备注">📝</span>' : '';
+    var noteMark = notesOf(ds).length ? '<span class="cal-note-mark" title="有备注">📝</span>' : '';
 
     html += '<div class="' + cls + '" onclick="selectCalDate(\'' + ds + '\')">';
     html += '<div class="cal-num">' + d + '</div>';
@@ -1237,81 +1285,138 @@ function selectCalDate(ds) {
 
   var ev = getEventsOnDate(ds);
   var pa = getPastOnDate(ds);
+  var notes = notesOf(ds);
   var hol = HOLIDAYS_CN[ds];
-  var term = SOLAR_TERMS_CN[ds];
+  var term = getSolarTerm(ds);
   var h = '<strong style="color:#3498db">' + ds + '</strong>';
   if (hol) h += ' <span style="font-size:11px;padding:1px 6px;border-radius:4px;color:#fff;background:'+(hol.h?'#e74c3c':'#fd7e14')+'">'+hol.n+(hol.h?' 放假':' 调休上班')+'</span>';
   if (term) h += ' <span style="font-size:11px;color:#3498db">·'+term+'</span>';
-  if (ev.length) {
-    h += '<div style="margin-top:6px"><div style="color:#00b894;font-weight:600;margin-bottom:2px">已排活动：</div>';
-    ev.forEach(function(e){ h += '<div>• ' + esc(e.mall) + '（' + fmtRange(e.range) + '）</div>'; });
-    h += '</div>';
+
+  function rowBtns(editCall, delCall){
+    return '<span class="cd-acts">'
+      + '<button class="cd-btn" title="编辑" onclick="'+editCall+'">✏️</button>'
+      + '<button class="cd-btn cd-del" title="删除" onclick="'+delCall+'">🗑</button></span>';
   }
-  if (pa.length) {
-    h += '<div style="margin-top:6px"><div style="color:#e74c3c;font-weight:600;margin-bottom:2px">过往活动：</div>';
-    pa.forEach(function(p){
-      var i = pastActivities.indexOf(p);
-      h += '<div>• ' + esc(p.location) + (p.notes ? '（'+esc(p.notes)+'）':'') + ' <button onclick="delPast('+i+')" style="font-size:11px;color:var(--danger);background:none;border:none;cursor:pointer;margin-left:4px">删除</button></div>';
+
+  // 已排活动
+  if (ev.length) {
+    h += '<div class="cd-group"><div class="cd-title" style="color:#c0392b">已排活动</div>';
+    ev.forEach(function(e){
+      h += '<div class="cd-row"><span class="cd-text">'+esc(e.mall)+'（'+fmtRange(e.range)+'）</span>'
+        + rowBtns("editScheduled('"+e.mallId+"')", "delScheduled('"+e.mallId+"',"+e.rangeIndex+")") + '</div>';
     });
     h += '</div>';
   }
-  // 当天备注
-  if (dayNotes[ds]) {
-    h += '<div style="margin-top:6px"><div style="color:#a07000;font-weight:600;margin-bottom:2px">📝 备注：</div>';
-    h += '<div style="white-space:pre-wrap">' + esc(dayNotes[ds]) + '</div></div>';
+  // 过往活动
+  if (pa.length) {
+    h += '<div class="cd-group"><div class="cd-title" style="color:#a07000">过往活动</div>';
+    pa.forEach(function(p){
+      var i = pastActivities.indexOf(p);
+      h += '<div class="cd-row"><span class="cd-text">'+esc(p.location)+(p.notes?'（'+esc(p.notes)+'）':'')+'</span>'
+        + rowBtns("editPast("+i+")", "delPast("+i+")") + '</div>';
+    });
+    h += '</div>';
   }
-  if (!ev.length && !pa.length && !dayNotes[ds]) {
+  // 备注（多条）
+  if (notes.length) {
+    h += '<div class="cd-group"><div class="cd-title" style="color:#2c6fb3">📝 备注</div>';
+    notes.forEach(function(t, ni){
+      h += '<div class="cd-row"><span class="cd-text" style="white-space:pre-wrap">'+esc(t)+'</span>'
+        + rowBtns("editNote('"+ds+"',"+ni+")", "delNote('"+ds+"',"+ni+")") + '</div>';
+    });
+    h += '</div>';
+  }
+  if (!ev.length && !pa.length && !notes.length) {
     h += '<div style="color:var(--muted);margin-top:6px">本日无记录</div>';
   }
-  // 操作按钮
-  h += '<div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">';
+  // 添加按钮：备注在上，过往活动在下
+  h += '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">';
+  h += '<button onclick="addNote(\''+ds+'\')" style="font-size:12px;color:#3498db;background:none;border:none;cursor:pointer;padding:0">＋ 添加备注</button>';
   h += '<button onclick="addPastActivity(\''+ds+'\')" style="font-size:12px;color:#3498db;background:none;border:none;cursor:pointer;padding:0">＋ 添加过往活动</button>';
-  h += '<button onclick="editDayNote(\''+ds+'\')" style="font-size:12px;color:#a07000;background:none;border:none;cursor:pointer;padding:0">'+(dayNotes[ds]?'✏️ 编辑备注':'＋ 添加备注')+'</button>';
-  if (dayNotes[ds]) h += '<button onclick="delDayNote(\''+ds+'\')" style="font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;padding:0">🗑 删除备注</button>';
   h += '</div>';
   document.getElementById('calDetail').innerHTML = h;
 }
 
-function editDayNote(ds) {
-  var cur = dayNotes[ds] || '';
-  var v = prompt('为 ' + ds + ' 添加/编辑备注：', cur);
-  if (v === null) return;
-  v = v.trim();
-  if (v) dayNotes[ds] = v; else delete dayNotes[ds];
-  saveDayNotes();
-  renderCalendar();
+// ===== 备注（多条）=====
+function addNote(ds) {
+  var v = prompt('为 ' + ds + ' 添加备注：', '');
+  if (v === null) return; v = v.trim(); if (!v) return;
+  if (!dayNotes[ds]) dayNotes[ds] = [];
+  dayNotes[ds].push(v);
+  saveDayNotes(); renderCalendar();
 }
-function delDayNote(ds) {
-  if (!confirm('删除 ' + ds + ' 的备注？')) return;
-  delete dayNotes[ds];
-  saveDayNotes();
-  renderCalendar();
+function editNote(ds, ni) {
+  var arr = dayNotes[ds]; if (!arr || !arr[ni]) return;
+  var v = prompt('编辑备注（清空并确定即删除该条）：', arr[ni]);
+  if (v === null) return; v = v.trim();
+  if (v) arr[ni] = v; else arr.splice(ni, 1);
+  if (!arr.length) delete dayNotes[ds];
+  saveDayNotes(); renderCalendar();
+}
+function delNote(ds, ni) {
+  var arr = dayNotes[ds]; if (!arr) return;
+  if (!confirm('删除这条备注？')) return;
+  arr.splice(ni, 1);
+  if (!arr.length) delete dayNotes[ds];
+  saveDayNotes(); renderCalendar();
 }
 
+// ===== 已排活动 编辑/删除 =====
+function editScheduled(mallId) {
+  closeCalModal();
+  openEditModal(mallId);   // 排期挂在场地下，打开该场地编辑表单
+}
+function delScheduled(mallId, rangeIndex) {
+  var m = allMalls.find(function(x){return x.id===mallId;});
+  if (!m || !m.scheduledDatesList || !m.scheduledDatesList[rangeIndex]) return;
+  var r = m.scheduledDatesList[rangeIndex];
+  if (!confirm('删除 ' + m.name + ' 的这条排期（' + fmtRange(r) + '）？')) return;
+  m.scheduledDatesList.splice(rangeIndex, 1);
+  saveData(); renderAll(); renderCalendar();
+}
+
+var editingPastIdx = null;
 function addPastActivity(presetDate) {
+  editingPastIdx = null;
+  document.querySelector('#pastEditPanel h4').textContent = '添加过往活动';
   document.getElementById('pastDate').value = presetDate || calSelected || new Date().toISOString().slice(0,10);
   document.getElementById('pastLocation').value = '';
   document.getElementById('pastNotes').value = '';
   var dl = document.getElementById('venueDataList');
   dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
   document.getElementById('pastEditPanel').classList.add('show');
-  // 滚到顶上让面板进入视野
   var body = document.querySelector('#calModalOverlay .modal-body');
   if (body) body.scrollTop = 0;
   setTimeout(function(){ document.getElementById('pastLocation').focus(); }, 100);
 }
-function cancelAddPast() { document.getElementById('pastEditPanel').classList.remove('show'); }
+function editPast(idx) {
+  var p = pastActivities[idx]; if (!p) return;
+  editingPastIdx = idx;
+  document.querySelector('#pastEditPanel h4').textContent = '编辑过往活动';
+  document.getElementById('pastDate').value = p.date;
+  document.getElementById('pastLocation').value = p.location;
+  document.getElementById('pastNotes').value = p.notes || '';
+  var dl = document.getElementById('venueDataList');
+  dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
+  document.getElementById('pastEditPanel').classList.add('show');
+  var body = document.querySelector('#calModalOverlay .modal-body');
+  if (body) body.scrollTop = 0;
+}
+function cancelAddPast() { document.getElementById('pastEditPanel').classList.remove('show'); editingPastIdx = null; }
 function savePastActivity() {
   var date = document.getElementById('pastDate').value;
   var location = document.getElementById('pastLocation').value.trim();
   var notes = document.getElementById('pastNotes').value.trim();
   if (!date) { alert('请选择日期'); return; }
   if (!location) { alert('请填写地点'); return; }
-  pastActivities.push({ date: date, location: location, notes: notes });
+  if (editingPastIdx !== null && pastActivities[editingPastIdx]) {
+    pastActivities[editingPastIdx] = { date: date, location: location, notes: notes };
+  } else {
+    pastActivities.push({ date: date, location: location, notes: notes });
+  }
   savePastActivities();
   cancelAddPast();
   calSelected = date;
-  // 若不在该日所属月份，自动跳过去
   var y = parseInt(date.slice(0,4), 10);
   var m = parseInt(date.slice(5,7), 10) - 1;
   if (y !== calYear || m !== calMonth) { calYear = y; calMonth = m; }
