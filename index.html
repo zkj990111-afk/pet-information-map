@@ -161,18 +161,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 /* 当天详情：活动/备注行 + 操作按钮 */
 .cd-group { margin-top:10px; }
 .cd-title { font-size:12px; font-weight:600; margin-bottom:4px; }
-.cd-row { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eee; }
-.cd-row:last-child { border-bottom:none; }
+.cd-row { display:flex; align-items:center; gap:6px; padding:3px 0; }
 .cd-text { flex:1; min-width:0; font-size:13px; }
+.cd-text::before { content:'·'; margin-right:5px; color:#bbb; font-weight:700; }
 .cd-acts { flex:0 0 auto; display:flex; gap:4px; }
 .cd-btn { width:26px; height:24px; border:1px solid var(--border); background:#fff; border-radius:6px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
-.cd-btn { font-size:11px; }            /* 铅笔 emoji 偏大，缩一点 */
-.cd-btn.cd-del { font-size:13px; }     /* 垃圾桶 emoji 偏小，放大一点 */
+.cd-btn { font-size:10px; }            /* 铅笔 emoji 偏大，缩小 */
+.cd-btn.cd-del { font-size:15px; }     /* 垃圾桶 emoji 偏小，放大 */
 .cd-btn:hover { background:#f0f7ff; }
 .cd-btn.cd-del:hover { background:#fdecea; border-color:#e74c3c; }
-.cal-nav { display:flex; gap:6px; align-items:center; }
-.cal-nav button { font-size:13px; padding:4px 12px; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; }
+.cal-nav { display:flex; gap:5px; align-items:center; }
+.cal-nav button { font-size:12px; padding:3px 9px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; }
 .cal-nav button:hover { background:#f0f0f0; }
+#calModalOverlay .modal-header { padding:8px 14px; }
+#calModalOverlay .modal-header h3 { font-size:15px; }
+.cal-jump-btn { padding:3px 9px !important; }
 .sched-row { display:flex; gap:6px; align-items:flex-end; margin-bottom:6px; }
 .sched-row > div { flex:1; min-width:0; }
 .sched-row > div > span { display:block; font-size:11px; color:var(--muted); margin-bottom:3px; }
@@ -297,6 +300,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
     </div>
     <div class="modal-body">
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span class="lg-item"><i class="lg-sw" style="background:#f7a8a8"></i>已排活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#f5d976"></i>过往活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9be0a3"></i>今天有活动</span>
+        <span class="lg-item"><i class="lg-sw" style="background:#9dc4f5"></i>今天</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#e74c3c">休</i>节假日</span>
+        <span class="lg-item"><i class="lg-tag" style="background:#fd7e14">班</i>调休</span>
+      </div>
+      <div class="cal-detail" id="calDetail">点击日期查看当天详情</div>
       <div class="past-edit-panel" id="pastEditPanel">
         <h4>添加过往活动</h4>
         <div class="row-2">
@@ -322,16 +335,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <button class="btn btn-primary" onclick="saveNoteEdit()">保存</button>
         </div>
       </div>
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="cal-legend">
-        <span class="lg-item"><i class="lg-sw" style="background:#f7a8a8"></i>已排活动</span>
-        <span class="lg-item"><i class="lg-sw" style="background:#f5d976"></i>过往活动</span>
-        <span class="lg-item"><i class="lg-sw" style="background:#9be0a3"></i>今天有活动</span>
-        <span class="lg-item"><i class="lg-sw" style="background:#9dc4f5"></i>今天</span>
-        <span class="lg-item"><i class="lg-tag" style="background:#e74c3c">休</i>节假日</span>
-        <span class="lg-item"><i class="lg-tag" style="background:#fd7e14">班</i>调休</span>
-      </div>
-      <div class="cal-detail" id="calDetail">点击日期查看当天详情</div>
     </div>
   </div>
 </div>
@@ -1379,7 +1382,7 @@ function selectCalDate(ds) {
   // —— 间隔 —— 备注块
   h += '<div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px">';
   if (notes.length) {
-    h += '<div class="cd-group" style="margin-top:0"><div class="cd-title" style="color:#2c6fb3">📝 备注</div>';
+    h += '<div class="cd-group" style="margin-top:0"><div class="cd-title" style="color:#7ba7d6">📝 备注</div>';
     notes.forEach(function(t, ni){
       h += '<div class="cd-row"><span class="cd-text" style="white-space:pre-wrap">'+esc(t)+'</span>'
         + rowBtns("editNote('"+ds+"',"+ni+")", "delNote('"+ds+"',"+ni+")") + '</div>';
@@ -1395,10 +1398,9 @@ function selectCalDate(ds) {
 var editingNote = null;   // {ds, ni}，ni===null 表示新增
 function openNotePanel() {
   cancelAddPast();
-  document.getElementById('noteEditPanel').classList.add('show');
-  var body = document.querySelector('#calModalOverlay .modal-body');
-  if (body) body.scrollTop = 0;
-  setTimeout(function(){ document.getElementById('noteText').focus(); }, 100);
+  var panel = document.getElementById('noteEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); document.getElementById('noteText').focus(); }, 60);
 }
 function addNote(ds) {
   editingNote = { ds: ds, ni: null };
@@ -1457,10 +1459,9 @@ function addPastActivity(presetDate) {
   document.getElementById('pastNotes').value = '';
   var dl = document.getElementById('venueDataList');
   dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
-  document.getElementById('pastEditPanel').classList.add('show');
-  var body = document.querySelector('#calModalOverlay .modal-body');
-  if (body) body.scrollTop = 0;
-  setTimeout(function(){ document.getElementById('pastLocation').focus(); }, 100);
+  var panel = document.getElementById('pastEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); document.getElementById('pastLocation').focus(); }, 60);
 }
 function editPast(idx) {
   var p = pastActivities[idx]; if (!p) return;
@@ -1472,9 +1473,9 @@ function editPast(idx) {
   document.getElementById('pastNotes').value = p.notes || '';
   var dl = document.getElementById('venueDataList');
   dl.innerHTML = allMalls.map(function(m){ return '<option value="'+esc(m.name)+'">'; }).join('');
-  document.getElementById('pastEditPanel').classList.add('show');
-  var body = document.querySelector('#calModalOverlay .modal-body');
-  if (body) body.scrollTop = 0;
+  var panel = document.getElementById('pastEditPanel');
+  panel.classList.add('show');
+  setTimeout(function(){ panel.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 60);
 }
 function cancelAddPast() { document.getElementById('pastEditPanel').classList.remove('show'); editingPastIdx = null; }
 function savePastActivity() {
