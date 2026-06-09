@@ -124,6 +124,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .cal-cell .cal-sub.term { color:#3498db; }
 .cal-cell .cal-sub.hol { background:#e74c3c; color:#fff; }
 .cal-cell .cal-sub.wd { background:#fd7e14; color:#fff; }
+.cal-cell .cal-note-mark { position:absolute; top:2px; right:3px; font-size:9px; line-height:1; }
 .cal-detail { margin-top:14px; padding:10px; background:#fafafa; border-radius:8px; font-size:13px; min-height:60px; }
 .cal-nav { display:flex; gap:6px; align-items:center; }
 .cal-nav button { font-size:13px; padding:4px 12px; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; }
@@ -193,7 +194,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <button onclick="document.getElementById('importFile').click()" title="导入 JSON 备份">📤</button>
         <button onclick="resetData()" title="恢复默认数据">🔄</button>
         <select id="sortSelect" onchange="changeSort(this.value)" title="排序方式">
-          <option value="">默认排序</option>
           <option value="district">按所在区域</option>
           <option value="coopCount">按合作次数</option>
           <option value="closestDate">按最近排期</option>
@@ -355,6 +355,11 @@ function loadPastActivities() { try { return JSON.parse(localStorage.getItem(PAS
 function savePastActivities() { localStorage.setItem(PAST_KEY, JSON.stringify(pastActivities)); }
 var pastActivities = loadPastActivities();
 
+var DAYNOTE_KEY = 'pet_day_notes_v1';
+function loadDayNotes() { try { return JSON.parse(localStorage.getItem(DAYNOTE_KEY) || '{}'); } catch(e) { return {}; } }
+function saveDayNotes() { localStorage.setItem(DAYNOTE_KEY, JSON.stringify(dayNotes)); }
+var dayNotes = loadDayNotes();
+
 function normalizeMall(m) {
   // 兼容旧字段 scheduledDates -> scheduledDatesList
   if (!m.scheduledDatesList) {
@@ -411,7 +416,7 @@ function saveBadge(t) { localStorage.setItem(BADGE_KEY, t); }
 var map = null;
 var allMalls = loadData();
 var activeFilter = 'all';
-var sortMode = '';
+var sortMode = 'district';
 var measureTool = null;
 var measurePath = [];
 var routePolylines = [];
@@ -1041,10 +1046,12 @@ function renderCalendar() {
     var sub = '';
     if (term) sub = '<div class="cal-sub term">'+term+'</div>';
     else if (hol) sub = '<div class="cal-sub '+(hol.h?'hol':'wd')+'">'+(hol.h?'休':'班')+'</div>';
+    var noteMark = dayNotes[ds] ? '<span class="cal-note-mark" title="有备注">📝</span>' : '';
 
     html += '<div class="' + cls + '" onclick="selectCalDate(\'' + ds + '\')">';
     html += '<div class="cal-num">' + d + '</div>';
     html += sub;
+    html += noteMark;
     html += '</div>';
   }
   grid.innerHTML = html;
@@ -1078,12 +1085,37 @@ function selectCalDate(ds) {
     });
     h += '</div>';
   }
-  if (!ev.length && !pa.length) {
-    h += '<div style="color:var(--muted);margin-top:6px">本日无活动 <button onclick="addPastActivity(\''+ds+'\')" style="font-size:11px;color:#3498db;background:none;border:none;cursor:pointer">+ 添加过往活动</button></div>';
-  } else {
-    h += '<div style="margin-top:8px"><button onclick="addPastActivity(\''+ds+'\')" style="font-size:11px;color:#3498db;background:none;border:none;cursor:pointer">+ 在本日添加过往活动</button></div>';
+  // 当天备注
+  if (dayNotes[ds]) {
+    h += '<div style="margin-top:6px"><div style="color:#a07000;font-weight:600;margin-bottom:2px">📝 备注：</div>';
+    h += '<div style="white-space:pre-wrap">' + esc(dayNotes[ds]) + '</div></div>';
   }
+  if (!ev.length && !pa.length && !dayNotes[ds]) {
+    h += '<div style="color:var(--muted);margin-top:6px">本日无记录</div>';
+  }
+  // 操作按钮
+  h += '<div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">';
+  h += '<button onclick="addPastActivity(\''+ds+'\')" style="font-size:12px;color:#3498db;background:none;border:none;cursor:pointer;padding:0">＋ 添加过往活动</button>';
+  h += '<button onclick="editDayNote(\''+ds+'\')" style="font-size:12px;color:#a07000;background:none;border:none;cursor:pointer;padding:0">'+(dayNotes[ds]?'✏️ 编辑备注':'＋ 添加备注')+'</button>';
+  if (dayNotes[ds]) h += '<button onclick="delDayNote(\''+ds+'\')" style="font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;padding:0">🗑 删除备注</button>';
+  h += '</div>';
   document.getElementById('calDetail').innerHTML = h;
+}
+
+function editDayNote(ds) {
+  var cur = dayNotes[ds] || '';
+  var v = prompt('为 ' + ds + ' 添加/编辑备注：', cur);
+  if (v === null) return;
+  v = v.trim();
+  if (v) dayNotes[ds] = v; else delete dayNotes[ds];
+  saveDayNotes();
+  renderCalendar();
+}
+function delDayNote(ds) {
+  if (!confirm('删除 ' + ds + ' 的备注？')) return;
+  delete dayNotes[ds];
+  saveDayNotes();
+  renderCalendar();
 }
 
 function addPastActivity(presetDate) {
@@ -1129,8 +1161,18 @@ function updateClock() {
 }
 
 // ==================== 📌 Badge 可编辑 + 多行滚动 ====================
-var badgeScrollTimer = null;
-function clearBadgeAnimation() { if (badgeScrollTimer) { clearTimeout(badgeScrollTimer); badgeScrollTimer = null; } }
+var badgeScrollTimers = [];
+var badgeScrollToken = 0;
+function clearBadgeAnimation() {
+  badgeScrollToken++;            // 旧链全部作废
+  badgeScrollTimers.forEach(clearTimeout);
+  badgeScrollTimers = [];
+}
+function badgeTimeout(fn, ms, token) {
+  var id = setTimeout(function(){ if (token === badgeScrollToken) fn(); }, ms);
+  badgeScrollTimers.push(id);
+  return id;
+}
 
 function measureTextWidth(text, fontStyle) {
   var m = document.createElement('span');
@@ -1174,8 +1216,8 @@ function runBadgeScroll(lines, areaW) {
   var elB = document.getElementById('badgeScrollB');
   if (!elA || !elB) return;
   var SPEED = 40;       // 像素/秒
-  var GAP_PX = 55;      // 上一行开始外滚后多走 5 个字（约 55 px）下一行就进场
-  var idx = 0;
+  var GAP_PX = 55;      // 上一行开始外滚后多走约 5 个字，下一行才进场
+  var token = badgeScrollToken;   // 本次运行的代次令牌
 
   function playOn(el, text, onTriggerNext) {
     el.textContent = text;
@@ -1189,19 +1231,20 @@ function runBadgeScroll(lines, areaW) {
     el.style.transition = 'transform ' + inDur.toFixed(2) + 's linear';
     el.style.transform = 'translateX(0px)';
 
-    badgeScrollTimer = setTimeout(function() {
+    badgeTimeout(function() {
       // 完整展示 10 秒
-      badgeScrollTimer = setTimeout(function() {
+      badgeTimeout(function() {
         // 开始外滚
         var outDur = textW / SPEED;
         el.style.transition = 'transform ' + outDur.toFixed(2) + 's linear';
         el.style.transform = 'translateX(' + (-textW) + 'px)';
-        // 错位 5 字距离后触发下一行
-        badgeScrollTimer = setTimeout(onTriggerNext, (GAP_PX / SPEED) * 1000);
-      }, 10000);
-    }, inDur * 1000 + 50);
+        // 错位约 5 字距离后触发下一行
+        badgeTimeout(onTriggerNext, (GAP_PX / SPEED) * 1000, token);
+      }, 10000, token);
+    }, inDur * 1000 + 50, token);
   }
 
+  var idx = 0;
   function step(useA) {
     idx = (idx + 1) % lines.length;
     var el = useA ? elA : elB;
