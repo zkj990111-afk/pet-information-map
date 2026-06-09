@@ -38,6 +38,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .mall-item { padding:10px 14px; border-bottom:1px solid #f0f0f0; cursor:pointer; transition:background 0.15s; display:flex; align-items:flex-start; gap:8px; }
 .mall-item:hover { background:#fafafa; }
 .mall-item.selected { background:#eef6ff; }
+.mall-item.dragging { background:#eaf4ff; opacity:0.9; box-shadow:0 4px 14px rgba(0,0,0,0.18); }
+.drag-handle { flex-shrink:0; color:#bbb; font-size:18px; line-height:1.2; cursor:grab; touch-action:none; user-select:none; padding:0 2px; margin-top:2px; }
+.drag-handle:active { cursor:grabbing; color:#3498db; }
 .mall-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:6px; }
 .mall-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
 .mall-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
@@ -197,6 +200,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
           <option value="district">按所在区域</option>
           <option value="coopCount">按合作次数</option>
           <option value="closestDate">按最近排期</option>
+          <option value="custom">✋ 自定义排序</option>
         </select>
       </div>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
@@ -359,6 +363,17 @@ var DAYNOTE_KEY = 'pet_day_notes_v1';
 function loadDayNotes() { try { return JSON.parse(localStorage.getItem(DAYNOTE_KEY) || '{}'); } catch(e) { return {}; } }
 function saveDayNotes() { localStorage.setItem(DAYNOTE_KEY, JSON.stringify(dayNotes)); }
 var dayNotes = loadDayNotes();
+
+var ORDER_KEY = 'pet_custom_order_v1';
+function loadCustomOrder() { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch(e) { return []; } }
+function saveCustomOrder() { localStorage.setItem(ORDER_KEY, JSON.stringify(customOrder)); }
+var customOrder = loadCustomOrder();
+// 确保 customOrder 与现有场地同步：补新增、删已删
+function syncCustomOrder() {
+  var ids = allMalls.map(function(m){return m.id;});
+  customOrder = customOrder.filter(function(id){return ids.indexOf(id)>=0;});
+  ids.forEach(function(id){ if(customOrder.indexOf(id)<0) customOrder.push(id); });
+}
 
 function normalizeMall(m) {
   // 兼容旧字段 scheduledDates -> scheduledDatesList
@@ -694,6 +709,12 @@ function renderFilters() {
   };});
 }
 function filteredMalls() {
+  // 自定义排序模式：忽略筛选，显示全部，按 customOrder 排列
+  if (sortMode === 'custom') {
+    syncCustomOrder();
+    return customOrder.map(function(id){ return allMalls.find(function(m){return m.id===id;}); }).filter(Boolean);
+  }
+
   var list;
   if(activeFilter==='all') list = allMalls.slice();
   else if(activeFilter==='quality') list = allMalls.filter(function(m){return m.quality==='high';});
@@ -734,7 +755,9 @@ function renderMallList() {
       var moreTip = totalN>1 ? '\n共 '+totalN+' 条排期：'+allRanges : '';
       b+='<span style="background:#d4f7ef;color:#00b894" title="最近：'+esc(fmtRange(next))+esc(moreTip)+'">📅'+fmtRange(next)+(totalN>1?' +'+(totalN-1):'')+'</span>';
     }
-    h+='<div class="mall-item" data-id="'+m.id+'">'
+    var handle = (sortMode==='custom') ? '<span class="drag-handle" title="按住拖动排序">⠿</span>' : '';
+    h+='<div class="mall-item'+(sortMode==='custom'?' drag-mode':'')+'" data-id="'+m.id+'">'
+      +handle
       +'<span class="mall-dot" style="background:'+c+'" onclick="focusMall(\''+m.id+'\')"></span>'
       +'<div class="mall-main">'
         +'<div class="mall-top">'
@@ -750,8 +773,54 @@ function renderMallList() {
       +'</div>';
   });
   document.getElementById('mallList').innerHTML=h;
+  if (sortMode==='custom') bindDragHandles();
 }
 function updateAddBtn() { /* 已废弃，保留空函数避免调用方报错 */ }
+
+// ==================== 自定义排序拖拽 ====================
+var dragState = null;
+function bindDragHandles() {
+  document.querySelectorAll('#mallList .drag-handle').forEach(function(h){
+    h.addEventListener('pointerdown', onDragStart);
+  });
+}
+function onDragStart(e) {
+  e.preventDefault();
+  var item = e.target.closest('.mall-item');
+  if (!item) return;
+  dragState = { el: item };
+  item.classList.add('dragging');
+  try { e.target.setPointerCapture(e.pointerId); } catch(err){}
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+}
+function onDragMove(e) {
+  if (!dragState) return;
+  e.preventDefault();
+  var list = document.getElementById('mallList');
+  var y = e.clientY;
+  var others = Array.prototype.slice.call(list.querySelectorAll('.mall-item:not(.dragging)'));
+  var after = null;
+  for (var i=0;i<others.length;i++){
+    var r = others[i].getBoundingClientRect();
+    if (y < r.top + r.height/2) { after = others[i]; break; }
+  }
+  if (after) list.insertBefore(dragState.el, after);
+  else list.appendChild(dragState.el);
+}
+function onDragEnd(e) {
+  if (!dragState) return;
+  dragState.el.classList.remove('dragging');
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+  // 从 DOM 顺序重建 customOrder
+  customOrder = Array.prototype.slice.call(document.querySelectorAll('#mallList .mall-item'))
+    .map(function(el){ return el.getAttribute('data-id'); });
+  saveCustomOrder();
+  dragState = null;
+}
 
 function highlightMallInList(id) {
   document.querySelectorAll('.mall-item').forEach(function(el){el.classList.remove('selected');});
