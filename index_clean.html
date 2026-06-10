@@ -72,12 +72,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .float-legend .legend-chev { width:9px; align-self:stretch; }
 .float-legend .legend-toggle:hover .legend-chev polyline { stroke:#3498db; }
 .float-legend .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
-.float-actions { position:absolute; bottom:20px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:30; }
+.float-actions { position:absolute; bottom:20px; right:30px; display:flex; flex-direction:column; gap:6px; z-index:30; }
 .float-actions button { width:34px; height:34px; border-radius:9px; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; }
 .float-actions button.active-tool { background:#3498db; color:#fff; }
 /* emoji 字形天生偏下，用 span 整体上顶纠正；偏多的单独加大 */
 .float-actions button > span { display:block; transform:translateY(-1.3px); }
 .float-actions button#btnRoute > span { transform:translateY(-2px); }
+/* 罗盘大小：scale 数字越小越小（0.8 = 缩到八成），右下角为锚点不跑位 */
+.amap-controlbar { transform:scale(0.7); transform-origin:right bottom; }
 .info-card { padding:4px 6px; font-size:13px; line-height:1.6; min-width:200px; max-width:280px; }
 .info-card h4 { font-size:15px; margin-bottom:6px; }
 .info-card .row { display:flex; justify-content:space-between; margin-bottom:1px; }
@@ -661,10 +663,26 @@ function calcDrivingRoute(startLng, startLat, endLng, endLat) {
   });
 }
 
+// 让罗盘水平中心对齐到右下角四个按钮的中线（用实际渲染尺寸算，改按钮大小/罗盘scale都自动跟上）
+function alignCompass(){
+  var cb = document.querySelector('.amap-controlbar');
+  var fa = document.querySelector('.float-actions');
+  if(!cb || !fa) return;
+  var faRect = fa.getBoundingClientRect();
+  var cbRect = cb.getBoundingClientRect();
+  var faCenterX = faRect.left + faRect.width/2;
+  var cbCenterX = cbRect.left + cbRect.width/2;
+  var curRight = parseFloat(getComputedStyle(cb).right) || 0;
+  cb.style.right = (curRight + cbCenterX - faCenterX) + 'px';  // 增大right=左移，按实测差值一次到位
+}
+
 // ==================== 地图初始化 ====================
 function initApp() {
-  map = new AMap.Map('map', { zoom:11, center:[116.4074,39.9042], mapStyle:'amap://styles/light', resizeEnable:true, features:['bg','road','building','point'] });
-  map.addControl(new AMap.ControlBar({ position:{right:'10px',top:'50px'} }));
+  map = new AMap.Map('map', { zoom:11, center:[116.4074,39.9042], mapStyle:'amap://styles/macaron', resizeEnable:true, features:['bg','road','building','point'] });
+  // 罗盘位置：bottom=离底边距离（数字越大越往上）。左右方向由 alignCompass() 自动对齐到按钮中线，不用手填
+  map.addControl(new AMap.ControlBar({ position:{ right:'10px', bottom:'180px' } }));
+  map.on('complete', function(){ setTimeout(alignCompass, 200); });
+  window.addEventListener('resize', function(){ setTimeout(alignCompass, 100); });
   setupAutocomplete();
   setupSearchBox();
   renderAll();
