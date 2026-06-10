@@ -78,6 +78,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 /* emoji 字形天生偏下，用 span 整体上顶纠正；偏多的单独加大 */
 .float-actions button > span { display:block; transform:translateY(-1.3px); }
 .float-actions button#btnRoute > span { transform:translateY(-2px); }
+.float-actions button > span.route-ico { transform:none; display:flex; align-items:center; justify-content:center; } /* 箭头SVG用flex居中，不要emoji那套上顶 */
 /* 罗盘大小：scale 数字越小越小（0.8 = 缩到八成），右下角为锚点不跑位 */
 .amap-controlbar { transform:scale(0.7); transform-origin:right bottom; }
 .info-card { padding:4px 6px; font-size:13px; line-height:1.6; min-width:200px; max-width:280px; }
@@ -146,6 +147,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .route-result { display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.95); border-radius:10px; padding:8px 16px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:35; white-space:nowrap; }
 .route-result.show { display:block; }
 .route-result strong { color:#3498db; }
+/* 路线结果面板：三标签 + 摘要/公交方案列表 */
+.route-box { display:none; position:absolute; top:14px; left:50%; transform:translateX(-50%); width:360px; max-width:92%; background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.18); z-index:36; overflow:hidden; }
+.route-box.show { display:block; }
+.route-tabs { display:flex; align-items:center; border-bottom:1px solid var(--border); }
+.route-tab { flex:1; padding:9px 4px; font-size:13px; border:none; background:#fff; cursor:pointer; color:#666; border-bottom:2px solid transparent; transition:all 0.15s; }
+.route-tab:hover { background:#f5f9ff; }
+.route-tab.active { color:#3498db; font-weight:600; border-bottom-color:#3498db; }
+.route-box-close { width:34px; border:none; background:#fff; cursor:pointer; color:#999; font-size:14px; border-left:1px solid var(--border); }
+.route-box-close:hover { color:#e74c3c; }
+.route-summary { padding:10px 14px; font-size:13px; line-height:1.6; }
+.route-summary strong { color:#3498db; }
+.route-panel { max-height:46vh; overflow-y:auto; }
+.route-panel:empty { display:none; }
 .search-banner { display:none; position:absolute; top:12px; left:50%; transform:translateX(-50%); background:#fff; border-radius:12px; padding:8px 12px; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,0.18); z-index:38; align-items:center; gap:10px; max-width:90%; }
 .search-banner.show { display:flex; }
 .search-banner #searchBannerText { font-weight:500; color:#333; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -292,9 +306,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div class="float-weather" id="weather"><div class="wtitle">北京</div><div class="desc">加载中...</div></div>
     <div class="float-legend" id="legend"></div>
     <div class="route-result" id="routeResult"></div>
+    <div class="route-box" id="routeBox">
+      <div class="route-tabs">
+        <button class="route-tab active" data-mode="driving" onclick="setRouteMode('driving')">🚗 驾车</button>
+        <button class="route-tab" data-mode="transit" onclick="setRouteMode('transit')">🚌 公交</button>
+        <button class="route-tab" data-mode="walking" onclick="setRouteMode('walking')">🚶 步行</button>
+        <button class="route-box-close" onclick="clearMeasure()" title="关闭">✕</button>
+      </div>
+      <div class="route-summary" id="routeSummary"></div>
+      <div class="route-panel" id="routePanel"></div>
+    </div>
     <div class="float-actions">
       <button onclick="measureStraight()" id="btnStraight" title="直线测距"><span>📏</span></button>
-      <button onclick="measureRoute()" id="btnRoute" title="驾车路线测距"><span>🚗</span></button>
+      <button onclick="measureRoute()" id="btnRoute" title="路线测距"><span class="route-ico"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.2"/><path d="M6 17 V11 a5 5 0 0 1 5-5 h4"/><path d="M13 3 l4 3 -4 3"/></svg></span></button>
       <button onclick="clearMeasure()" title="清除测距"><span>✖</span></button>
       <button onclick="fitAll()" title="缩放到全部"><span>⛶</span></button>
     </div>
@@ -632,34 +656,68 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ==================== 驾车路线（SDK AMap.Driving） ====================
-var drivingObj = null;
-function calcDrivingRoute(startLng, startLat, endLng, endLat) {
-  showRouteResult('🚗 计算中...');
-  if (typeof AMap === 'undefined' || !AMap.Driving) {
-    showRouteResult('⚠️ 路线规划插件未加载');
-    return;
-  }
-  if (drivingObj) { try { drivingObj.clear(); } catch(e){} drivingObj = null; }
-  try {
-    drivingObj = new AMap.Driving({ map: map, hideMarkers: true, autoFitView: false, showTraffic: false });
-  } catch(e) {
-    showRouteResult('⚠️ 创建路线对象失败：' + e.message);
-    return;
-  }
-  drivingObj.search([startLng, startLat], [endLng, endLat], function(status, result) {
-    if (status === 'complete' && result.routes && result.routes.length) {
-      var r = result.routes[0];
-      var dist = (r.distance/1000).toFixed(1);
-      var time = Math.round(r.time/60);
-      showRouteResult('🚗 驾车 <strong>' + dist + ' 公里</strong> · 约 <strong>' + time + ' 分钟</strong>');
-    } else {
-      var msg = '路线计算失败';
-      if (typeof result === 'string') msg += '：' + result;
-      else if (result && result.info) msg += '：' + result.info;
-      else msg += '（status=' + status + '）';
-      showRouteResult('⚠️ ' + msg);
-    }
+// ==================== 路线规划：驾车 / 公交 / 步行 三方式 ====================
+var routeObj = null;                 // 当前路线对象（Driving/Walking/Transfer）
+var routeEndLng = 0, routeEndLat = 0;
+var ROUTE_CITY = '北京';
+
+function clearRouteObj(){ if(routeObj){ try{routeObj.clear();}catch(e){} routeObj=null; } }
+
+// 选完起点+终点后调用：弹出三标签面板，默认驾车
+function startRoutePlan(sLng, sLat, eLng, eLat){
+  routeStartLng=sLng; routeStartLat=sLat; routeEndLng=eLng; routeEndLat=eLat;
+  hideRouteResult();
+  document.getElementById('routeBox').classList.add('show');
+  setRouteMode('driving');
+}
+
+// 切换方式（标签点击也调它）
+function setRouteMode(mode){
+  document.querySelectorAll('#routeBox .route-tab').forEach(function(t){
+    t.classList.toggle('active', t.getAttribute('data-mode')===mode);
+  });
+  clearRouteObj();
+  var summary=document.getElementById('routeSummary');
+  var panel=document.getElementById('routePanel');
+  summary.innerHTML=''; panel.innerHTML='';
+  var s=[routeStartLng,routeStartLat], e=[routeEndLng,routeEndLat];
+  if(mode==='driving') calcDrivingRoute(s,e,summary);
+  else if(mode==='walking') calcWalkingRoute(s,e,summary);
+  else if(mode==='transit') calcTransitRoute(s,e,summary,panel);
+}
+
+function calcDrivingRoute(s,e,summary){
+  summary.innerHTML='🚗 计算中...';
+  if(!AMap.Driving){ summary.innerHTML='⚠️ 驾车插件未加载'; return; }
+  routeObj=new AMap.Driving({ map:map, hideMarkers:true, autoFitView:true, showTraffic:false });
+  routeObj.search(s, e, function(status,result){
+    if(status==='complete' && result.routes && result.routes.length){
+      var r=result.routes[0];
+      summary.innerHTML='🚗 驾车 <strong>'+(r.distance/1000).toFixed(1)+' 公里</strong> · 约 <strong>'+Math.round(r.time/60)+' 分钟</strong>';
+    } else summary.innerHTML='⚠️ 驾车路线计算失败';
+  });
+}
+
+function calcWalkingRoute(s,e,summary){
+  summary.innerHTML='🚶 计算中...';
+  if(!AMap.Walking){ summary.innerHTML='⚠️ 步行插件未加载'; return; }
+  routeObj=new AMap.Walking({ map:map, hideMarkers:true, autoFitView:true });
+  routeObj.search(s, e, function(status,result){
+    if(status==='complete' && result.routes && result.routes.length){
+      var r=result.routes[0];
+      summary.innerHTML='🚶 步行 <strong>'+(r.distance/1000).toFixed(1)+' 公里</strong> · 约 <strong>'+Math.round(r.time/60)+' 分钟</strong>';
+    } else summary.innerHTML='⚠️ 步行路线计算失败（可能距离过远）';
+  });
+}
+
+function calcTransitRoute(s,e,summary,panel){
+  summary.innerHTML='🚌 计算中…';
+  if(!AMap.Transfer){ summary.innerHTML='⚠️ 公交插件未加载'; return; }
+  routeObj=new AMap.Transfer({ map:map, city:ROUTE_CITY, hideMarkers:true, autoFitView:true, panel:'routePanel' });
+  routeObj.search(s, e, function(status,result){
+    if(status==='complete' && result.plans && result.plans.length){
+      summary.innerHTML='🚌 公交 · 共 <strong>'+result.plans.length+'</strong> 套方案，点选查看：';
+    } else { summary.innerHTML='⚠️ 公交路线计算失败'; panel.innerHTML=''; }
   });
 }
 
@@ -1129,7 +1187,7 @@ function handleRoutePick(lng, lat) {
   } else if (routeStep === 2) {
     var m2 = new AMap.Marker({position:[lng,lat],icon:'https://webapi.amap.com/theme/v1.3/markers/n/end.png',offset:new AMap.Pixel(-12,-32),map:map,zIndex:300});
     routeMarkersTemp.push(m2);
-    calcDrivingRoute(routeStartLng, routeStartLat, lng, lat);
+    startRoutePlan(routeStartLng, routeStartLat, lng, lat);
     if (routeClickHandler) { map.off('click', routeClickHandler); routeClickHandler = null; }
     deactivateTools(true);
     routeStep = 0;
@@ -1138,7 +1196,8 @@ function handleRoutePick(lng, lat) {
 
 function measureRoute() {
   if (activeTool === 'route') { deactivateTools(); hideRouteResult(); return; }
-  deactivateTools(); clearAllLines();
+  deactivateTools(); clearAllLines(); hideRouteBox();
+  routeMarkersTemp.forEach(function(m){ m.setMap(null); });  // 清掉上一次的起终点标记
   routeStep = 0;
   showRouteResult('📍 点击地图或商场标记选<b>起点</b>');
   activeTool = 'route';
@@ -1151,11 +1210,15 @@ function measureRoute() {
 function clearAllLines() {
   measurePath.forEach(function(p){p.setMap(null);}); measurePath=[];
   routePolylines.forEach(function(p){p.setMap(null);}); routePolylines=[];
-  if (drivingObj) { try { drivingObj.clear(); } catch(e){} drivingObj=null; }
+  clearRouteObj();
+}
+function hideRouteBox(){
+  var box=document.getElementById('routeBox');
+  if(box){ box.classList.remove('show'); document.getElementById('routeSummary').innerHTML=''; document.getElementById('routePanel').innerHTML=''; }
 }
 function showRouteResult(h){var el=document.getElementById('routeResult');el.innerHTML=h;el.classList.add('show');}
 function hideRouteResult(){document.getElementById('routeResult').classList.remove('show');}
-function clearMeasure(){clearAllLines();hideRouteResult();routeMarkersTemp.forEach(function(m){m.setMap(null);});routeMarkersTemp=[];deactivateTools();}
+function clearMeasure(){clearAllLines();hideRouteResult();hideRouteBox();routeMarkersTemp.forEach(function(m){m.setMap(null);});routeMarkersTemp=[];deactivateTools();}
 function fitAll(){map.setZoomAndCenter(11,[116.4074,39.9042]);}
 
 // ==================== 节假日（国务院官方公告，逐年录入） ====================
@@ -1777,6 +1840,6 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('hi
 <script type="text/javascript">
   window._AMapSecurityConfig = { securityJsCode: 'd144b3a232c0859ca1bccdab0651771f' };
 </script>
-<script src="https://webapi.amap.com/maps?v=2.0&key=0477a4bc2d60c2f38924aa9559a6cbde&plugin=AMap.MouseTool,AMap.ControlBar,AMap.AutoComplete,AMap.Geocoder,AMap.Driving,AMap.PlaceSearch,AMap.Weather&callback=initApp"></script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=0477a4bc2d60c2f38924aa9559a6cbde&plugin=AMap.MouseTool,AMap.ControlBar,AMap.AutoComplete,AMap.Geocoder,AMap.Driving,AMap.Transfer,AMap.Walking,AMap.PlaceSearch,AMap.Weather&callback=initApp"></script>
 </body>
 </html>
