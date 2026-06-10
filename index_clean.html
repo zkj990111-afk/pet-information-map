@@ -87,7 +87,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .info-card .row { display:flex; justify-content:space-between; margin-bottom:1px; }
 .info-card .lbl { color:var(--muted); }
 .info-card .iw-weather { margin-top:6px; padding-top:4px; border-top:1px solid #eee; font-size:12px; color:#3498db; }
-.toggle-btn { position:absolute; top:10px; left:10px; z-index:40; background:#fff; border:none; border-radius:50%; width:36px; height:36px; box-shadow:0 2px 8px rgba(0,0,0,0.14); font-size:16px; cursor:pointer; display:block; }
+/* 贴在左栏与地图分界上的拉条，随左栏收/展自然移动 */
+.sidebar-tab { position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:55; width:17px; height:50px; background:#fff; border:1px solid var(--border); border-left:none; border-radius:0 9px 9px 0; box-shadow:2px 0 6px rgba(0,0,0,0.08); font-size:15px; color:#999; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:color 0.15s; }
+.sidebar-tab:hover { color:#3498db; }
 .modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:200; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto; }
 .modal-overlay.show { display:flex; }
 .modal { background:#fff; border-radius:14px; width:90%; max-width:480px; box-shadow:0 8px 40px rgba(0,0,0,0.18); margin-bottom:40px; }
@@ -182,6 +184,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .nearby-item .nb-sub { font-size:11px; color:#999; margin-top:2px; }
 .nb-marker { width:22px; height:22px; border-radius:50%; background:#e67e22; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; line-height:1; box-shadow:0 2px 6px rgba(0,0,0,0.3); border:2px solid #fff; }
 .place-marker { font-size:22px; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+/* 右面板打开时，天气和右下角按钮整体左移，避免被盖住 */
+.float-weather, .float-actions { transition:right 0.25s ease; }
+.amap-controlbar { transition:right 0.25s ease; }
+.map-wrap.panel-open .float-weather { right:312px; }
+.map-wrap.panel-open .float-actions { right:312px; }
 .search-banner { display:none; position:absolute; top:12px; left:50%; transform:translateX(-50%); background:#fff; border-radius:12px; padding:8px 12px; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,0.18); z-index:38; align-items:center; gap:10px; max-width:90%; }
 .search-banner.show { display:flex; }
 .search-banner #searchBannerText { font-weight:500; color:#333; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -251,8 +258,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 
 @media (max-width:768px) {
   .sidebar { position:fixed; top:56px; left:0; bottom:0; z-index:50; width:280px; min-width:280px; box-shadow:2px 0 12px rgba(0,0,0,0.15); }
-  .sidebar.collapsed { transform:translateX(-100%); width:280px; min-width:280px; }
-  .toggle-btn { display:block; }
+  .sidebar.collapsed { transform:translateX(-100%); width:280px; min-width:280px; margin-left:0; }
   .float-legend { bottom:60px; font-size:10px; }
   .modal { width:95%; max-width:none; }
 }
@@ -318,7 +324,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
   </div>
 
   <div class="map-wrap">
-    <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()" title="收起/展开左栏">«</button>
+    <button class="sidebar-tab" id="sidebarTab" onclick="toggleSidebar()" title="收起/展开左栏">‹</button>
     <div id="map"></div>
     <div class="search-banner" id="searchBanner">
       <span id="searchBannerText"></span>
@@ -784,8 +790,10 @@ function showPlaceInfo(lng, lat){
   if(placeMarker) placeMarker.setMap(null);
   placeMarker = new AMap.Marker({ position:[lng,lat], map:map, zIndex:260,
     content:'<div class="place-marker">📍</div>', offset:new AMap.Pixel(-11,-26) });
-  // 打开右面板，先占位
+  // 打开右面板，先占位；并让天气/按钮/罗盘整体左移
   document.getElementById('infoPanel').classList.add('show');
+  document.querySelector('.map-wrap').classList.add('panel-open');
+  setTimeout(alignCompass, 280);
   document.getElementById('ipAddr').textContent = '地址解析中…';
   document.getElementById('ipLL').textContent = '经纬度：' + lng.toFixed(6) + ', ' + lat.toFixed(6);
   document.getElementById('nearbyInput').value = '';
@@ -800,6 +808,8 @@ function showPlaceInfo(lng, lat){
 }
 function closeInfoPanel(){
   document.getElementById('infoPanel').classList.remove('show');
+  document.querySelector('.map-wrap').classList.remove('panel-open');
+  setTimeout(alignCompass, 280);
   clearNearbyMarkers();
   if(placeMarker){ placeMarker.setMap(null); placeMarker = null; }
 }
@@ -1962,10 +1972,12 @@ function resetData() {
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
-  // 收/展后图标随之变向，并等过渡结束让地图重算尺寸
-  var btn=document.getElementById('toggleBtn');
-  if(btn) btn.textContent = sb.classList.contains('collapsed') ? '☰' : '«';
-  setTimeout(function(){ if(map) map.resize&&map.resize(); }, 300);
+  var collapsed=sb.classList.contains('collapsed');
+  // 拉条箭头随状态变向：展开时‹（点了收起），收起时›（点了展开）
+  var tab=document.getElementById('sidebarTab');
+  if(tab) tab.textContent = collapsed ? '›' : '‹';
+  // 过渡结束后让地图重算尺寸 + 罗盘重对齐
+  setTimeout(function(){ if(map&&map.resize) map.resize(); alignCompass(); }, 300);
 }
 </script>
 
