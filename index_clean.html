@@ -44,12 +44,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 @keyframes handleIn { from { transform:translateX(-16px); opacity:0; } to { transform:translateX(0); opacity:1; } }
 @keyframes handleOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(-16px); opacity:0; } }
 .mall-item.handle-leaving .drag-handle { animation:handleOut 0.25s ease forwards; }
-.mall-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:6px; }
+.mall-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; } /* 大小可调；上下位置已由名字行自动居中，不用 margin */
 .mall-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
 .mall-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .mall-name { font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
-.mall-meta { font-size:11px; color:var(--muted); }
-.mall-badges { display:flex; gap:4px; flex-wrap:wrap; }
+.mall-meta { font-size:11px; color:var(--muted); padding-left:18px; } /* 18=色块宽10+间距8，让信息对齐到名字下方 */
+.mall-badges { display:flex; gap:4px; flex-wrap:wrap; padding-left:18px; } /* 同上，对齐到名字下方 */
 .mall-badges span { font-size:10px; padding:1px 6px; border-radius:8px; }
 .mall-badges .q { background:#fff3cd; color:#b8860b; }
 .mall-badges .n { background:#d4f7ef; color:#00b894; }
@@ -72,7 +72,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .float-legend .legend-chev { width:9px; align-self:stretch; }
 .float-legend .legend-toggle:hover .legend-chev polyline { stroke:#3498db; }
 .float-legend .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
-.float-actions { position:absolute; bottom:20px; right:30px; display:flex; flex-direction:column; gap:6px; z-index:30; }
+.float-actions { position:absolute; bottom:20px; right:25px; display:flex; flex-direction:column; gap:6px; z-index:30; }
 .float-actions button { width:34px; height:34px; border-radius:9px; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; }
 .float-actions button.active-tool { background:#3498db; color:#fff; }
 /* emoji 字形天生偏下，用 span 整体上顶纠正；偏多的单独加大 */
@@ -919,9 +919,9 @@ function renderMallList() {
     var handle = editingOrder ? '<span class="drag-handle" title="按住拖动排序">⠿</span>' : '';
     h+='<div class="mall-item'+(editingOrder?' drag-mode':'')+'" data-id="'+m.id+'">'
       +handle
-      +'<span class="mall-dot" style="background:'+c+'" onclick="focusMall(\''+m.id+'\')"></span>'
       +'<div class="mall-main">'
         +'<div class="mall-top">'
+          +'<span class="mall-dot" style="background:'+c+'" onclick="focusMall(\''+m.id+'\')"></span>'
           +'<span class="mall-name" onclick="focusMall(\''+m.id+'\')" title="'+esc(m.name)+'">'+esc(m.name)+'</span>'
           +'<span class="mall-actions">'
             +'<button class="btn-edit" onclick="event.stopPropagation();openEditModal(\''+m.id+'\')">✏️</button>'
