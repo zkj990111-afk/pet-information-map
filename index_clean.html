@@ -738,7 +738,7 @@ function alignCompass(){
 function initApp() {
   map = new AMap.Map('map', { zoom:11, center:[116.4074,39.9042], mapStyle:'amap://styles/macaron', resizeEnable:true, features:['bg','road','building','point'] });
   // 罗盘位置：bottom=离底边距离（数字越大越往上）。左右方向由 alignCompass() 自动对齐到按钮中线，不用手填
-  map.addControl(new AMap.ControlBar({ position:{ right:'10px', bottom:'180px' } }));
+  map.addControl(new AMap.ControlBar({ position:{ right:'10px', bottom:'175px' } }));
   map.on('complete', function(){ setTimeout(alignCompass, 200); });
   window.addEventListener('resize', function(){ setTimeout(alignCompass, 100); });
   setupAutocomplete();
