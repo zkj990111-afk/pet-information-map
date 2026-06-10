@@ -310,6 +310,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <div class="route-tabs">
         <button class="route-tab active" data-mode="driving" onclick="setRouteMode('driving')">🚗 驾车</button>
         <button class="route-tab" data-mode="transit" onclick="setRouteMode('transit')">🚌 公交</button>
+        <button class="route-tab" data-mode="riding" onclick="setRouteMode('riding')">🚴 骑行</button>
         <button class="route-tab" data-mode="walking" onclick="setRouteMode('walking')">🚶 步行</button>
         <button class="route-box-close" onclick="clearMeasure()" title="关闭">✕</button>
       </div>
@@ -683,7 +684,20 @@ function setRouteMode(mode){
   var s=[routeStartLng,routeStartLat], e=[routeEndLng,routeEndLat];
   if(mode==='driving') calcDrivingRoute(s,e,summary);
   else if(mode==='walking') calcWalkingRoute(s,e,summary);
+  else if(mode==='riding') calcRidingRoute(s,e,summary);
   else if(mode==='transit') calcTransitRoute(s,e,summary,panel);
+}
+
+function calcRidingRoute(s,e,summary){
+  summary.innerHTML='🚴 计算中...';
+  if(!AMap.Riding){ summary.innerHTML='⚠️ 骑行插件未加载'; return; }
+  routeObj=new AMap.Riding({ map:map, hideMarkers:true, autoFitView:true });
+  routeObj.search(s, e, function(status,result){
+    if(status==='complete' && result.routes && result.routes.length){
+      var r=result.routes[0];
+      summary.innerHTML='🚴 骑行 <strong>'+(r.distance/1000).toFixed(1)+' 公里</strong> · 约 <strong>'+Math.round(r.time/60)+' 分钟</strong>';
+    } else summary.innerHTML='⚠️ 骑行路线计算失败（可能距离过远）';
+  });
 }
 
 function calcDrivingRoute(s,e,summary){
@@ -1840,6 +1854,6 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('hi
 <script type="text/javascript">
   window._AMapSecurityConfig = { securityJsCode: 'd144b3a232c0859ca1bccdab0651771f' };
 </script>
-<script src="https://webapi.amap.com/maps?v=2.0&key=0477a4bc2d60c2f38924aa9559a6cbde&plugin=AMap.MouseTool,AMap.ControlBar,AMap.AutoComplete,AMap.Geocoder,AMap.Driving,AMap.Transfer,AMap.Walking,AMap.PlaceSearch,AMap.Weather&callback=initApp"></script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=0477a4bc2d60c2f38924aa9559a6cbde&plugin=AMap.MouseTool,AMap.ControlBar,AMap.AutoComplete,AMap.Geocoder,AMap.Driving,AMap.Transfer,AMap.Walking,AMap.Riding,AMap.PlaceSearch,AMap.Weather&callback=initApp"></script>
 </body>
 </html>
