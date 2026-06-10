@@ -160,6 +160,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .route-summary strong { color:#3498db; }
 .route-panel { max-height:46vh; overflow-y:auto; }
 .route-panel:empty { display:none; }
+/* #1 点击地址弹窗 */
+.place-pop { font-size:13px; line-height:1.5; max-width:240px; }
+.place-pop .place-addr { font-weight:600; color:#2c3e50; margin-bottom:4px; }
+.place-pop .place-ll { font-size:11px; color:#999; font-family:monospace; margin-bottom:8px; }
+.place-pop .place-near-btn { font-size:12px; padding:5px 12px; border:none; border-radius:7px; background:#3498db; color:#fff; cursor:pointer; }
+.place-pop .place-near-btn:hover { background:#2980b9; }
+/* #2 搜附近浮窗 */
+.nearby-box { display:none; position:absolute; top:14px; left:14px; width:300px; max-width:80%; background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.18); z-index:37; overflow:hidden; }
+.nearby-box.show { display:block; }
+.nearby-head { display:flex; align-items:center; gap:6px; padding:8px; border-bottom:1px solid var(--border); }
+.nearby-head input { flex:1; min-width:0; padding:6px 9px; border:1px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; }
+.nearby-go { padding:6px 12px; border:none; border-radius:7px; background:#3498db; color:#fff; font-size:13px; cursor:pointer; white-space:nowrap; }
+.nearby-close { width:28px; border:none; background:none; color:#999; font-size:14px; cursor:pointer; }
+.nearby-close:hover { color:#e74c3c; }
+.nearby-list { max-height:50vh; overflow-y:auto; }
+.nearby-tip { padding:14px; font-size:12px; color:#999; text-align:center; }
+.nearby-item { padding:8px 12px; border-bottom:1px solid #f2f2f2; cursor:pointer; }
+.nearby-item:hover { background:#f5f9ff; }
+.nearby-item .nb-name { font-size:13px; color:#2c3e50; }
+.nearby-item .nb-sub { font-size:11px; color:#999; margin-top:2px; }
+.nb-marker { width:22px; height:22px; border-radius:50%; background:#e67e22; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; line-height:1; box-shadow:0 2px 6px rgba(0,0,0,0.3); border:2px solid #fff; }
 .search-banner { display:none; position:absolute; top:12px; left:50%; transform:translateX(-50%); background:#fff; border-radius:12px; padding:8px 12px; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,0.18); z-index:38; align-items:center; gap:10px; max-width:90%; }
 .search-banner.show { display:flex; }
 .search-banner #searchBannerText { font-weight:500; color:#333; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -316,6 +337,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       </div>
       <div class="route-summary" id="routeSummary"></div>
       <div class="route-panel" id="routePanel"></div>
+    </div>
+    <div class="nearby-box" id="nearbyBox">
+      <div class="nearby-head">
+        <input id="nearbyInput" placeholder="搜附近：如 地铁 / 超市 / 餐厅" onkeydown="if(event.key==='Enter')doNearbySearch()">
+        <button class="nearby-go" onclick="doNearbySearch()">搜索</button>
+        <button class="nearby-close" onclick="closeNearbySearch()" title="关闭">✕</button>
+      </div>
+      <div class="nearby-list" id="nearbyList"></div>
     </div>
     <div class="float-actions">
       <button onclick="measureStraight()" id="btnStraight" title="直线测距"><span>📏</span></button>
@@ -735,6 +764,74 @@ function calcTransitRoute(s,e,summary,panel){
   });
 }
 
+// ==================== #1 点击地图显示地址 + #2 搜附近 ====================
+var placeGeocoder = null, placeInfoWindow = null;
+function showPlaceInfo(lng, lat){
+  if(!AMap.Geocoder){ return; }
+  if(!placeGeocoder) placeGeocoder = new AMap.Geocoder({ city:'010', radius:1000 });
+  placeGeocoder.getAddress([lng, lat], function(status, result){
+    var addr = '（无法获取地址）';
+    if(status==='complete' && result.regeocode){ addr = result.regeocode.formattedAddress || addr; }
+    var html = '<div class="place-pop">'
+      + '<div class="place-addr">📍 ' + esc(addr) + '</div>'
+      + '<div class="place-ll">经纬度：' + lng.toFixed(6) + ', ' + lat.toFixed(6) + '</div>'
+      + '<button class="place-near-btn" onclick="openNearbySearch(' + lng + ',' + lat + ')">🔍 搜附近</button>'
+      + '</div>';
+    if(!placeInfoWindow) placeInfoWindow = new AMap.InfoWindow({ offset:new AMap.Pixel(0,-12), closeWhenClickMap:true });
+    placeInfoWindow.setContent(html);
+    placeInfoWindow.open(map, [lng, lat]);
+  });
+}
+
+var nearbyCenter = null, nearbySearchObj = null, nearbyMarkers = [], nearbyPois = [];
+function openNearbySearch(lng, lat){
+  nearbyCenter = [lng, lat];
+  if(placeInfoWindow) placeInfoWindow.close();
+  document.getElementById('nearbyBox').classList.add('show');
+  document.getElementById('nearbyInput').value = '';
+  document.getElementById('nearbyList').innerHTML = '<div class="nearby-tip">输入关键词，搜该点周边 2 公里内的地点</div>';
+  setTimeout(function(){ document.getElementById('nearbyInput').focus(); }, 100);
+}
+function doNearbySearch(){
+  var kw = document.getElementById('nearbyInput').value.trim();
+  var listEl = document.getElementById('nearbyList');
+  if(!kw){ listEl.innerHTML = '<div class="nearby-tip">请先输入关键词</div>'; return; }
+  if(!AMap.PlaceSearch || !nearbyCenter){ return; }
+  clearNearbyMarkers();
+  listEl.innerHTML = '<div class="nearby-tip">搜索中…</div>';
+  if(!nearbySearchObj) nearbySearchObj = new AMap.PlaceSearch({ pageSize:15, pageIndex:1 });
+  nearbySearchObj.searchNearBy(kw, nearbyCenter, 2000, function(status, result){
+    if(status==='complete' && result.poiList && result.poiList.pois && result.poiList.pois.length){
+      renderNearby(result.poiList.pois);
+    } else {
+      listEl.innerHTML = '<div class="nearby-tip">该点附近没找到「' + esc(kw) + '」</div>';
+    }
+  });
+}
+function renderNearby(pois){
+  nearbyPois = pois;
+  var h = '';
+  pois.forEach(function(p, i){
+    var loc = p.location;
+    var dist = (p.distance!=null) ? (p.distance<1000 ? Math.round(p.distance)+'米' : (p.distance/1000).toFixed(1)+'公里') : '';
+    h += '<div class="nearby-item" onclick="focusNearby(' + i + ')">'
+       + '<div class="nb-name">' + (i+1) + '. ' + esc(p.name) + '</div>'
+       + '<div class="nb-sub">' + esc(p.address||'') + (dist?' · '+dist:'') + '</div></div>';
+    if(loc){
+      var mk = new AMap.Marker({ position:[loc.lng, loc.lat], map:map,
+        content:'<div class="nb-marker">'+(i+1)+'</div>', offset:new AMap.Pixel(-11,-11), zIndex:250 });
+      nearbyMarkers.push(mk);
+    }
+  });
+  document.getElementById('nearbyList').innerHTML = h;
+}
+function focusNearby(i){
+  var p = nearbyPois[i]; if(!p || !p.location) return;
+  map.setCenter([p.location.lng, p.location.lat]); map.setZoom(16);
+}
+function clearNearbyMarkers(){ nearbyMarkers.forEach(function(m){ m.setMap(null); }); nearbyMarkers = []; }
+function closeNearbySearch(){ document.getElementById('nearbyBox').classList.remove('show'); clearNearbyMarkers(); }
+
 // 让罗盘水平中心对齐到右下角四个按钮的中线（用实际渲染尺寸算，改按钮大小/罗盘scale都自动跟上）
 function alignCompass(){
   var cb = document.querySelector('.amap-controlbar');
@@ -755,6 +852,10 @@ function initApp() {
   map.addControl(new AMap.ControlBar({ position:{ right:'10px', bottom:'175px' } }));
   map.on('complete', function(){ setTimeout(alignCompass, 200); });
   window.addEventListener('resize', function(){ setTimeout(alignCompass, 100); });
+  // #4 修复：页面切到后台再切回来时，滚动栏会因两套计时器不同步而错乱；切回可见时整段重播
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) updateFixedBadge(); });
+  // #1：没开任何工具时，点地图任意位置 → 显示该点详细地址（开了路线/测距工具时不触发，交给工具）
+  map.on('click', function(e){ if(activeTool) return; showPlaceInfo(e.lnglat.getLng(), e.lnglat.getLat()); });
   setupAutocomplete();
   setupSearchBox();
   renderAll();
