@@ -9,8 +9,8 @@
 :root { --gold:#f0a500; --bg:#f5f5f5; --panel-bg:#fff; --text:#333; --muted:#999; --border:#e0e0e0; --danger:#e74c3c; }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); height:100dvh; overflow:hidden; }
-.header { background:#fff; padding:10px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); z-index:100; position:relative; flex-wrap:wrap; }
-.header h1 { font-size:16px; white-space:nowrap; }
+.header { background:#fff; height:50px; box-sizing:border-box; padding:0 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); z-index:100; position:relative; }
+.header h1 { font-size:18px; white-space:nowrap; margin: -2px 0 0 0; padding:0; }
 .header .badge { font-size:11px; background:#ffeaa7; color:#d63031; padding:2px 8px; border-radius:10px; cursor:default; display:inline-flex; align-items:center; gap:6px; max-width:60vw; }
 .header .badge.editable { cursor:pointer; border:1.5px dashed #d63031; }
 .header .badge.editable:hover { background:#fff3cd; }
@@ -54,8 +54,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .mall-badges .q { background:#fff3cd; color:#b8860b; }
 .mall-badges .n { background:#d4f7ef; color:#00b894; }
 .mall-actions { display:flex; gap:3px; flex-shrink:0; }
-.mall-actions button { font-size:11px; padding:2px 6px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; min-width:26px; }
-.mall-actions .btn-del { color:#888; border-color:var(--border); }
+.mall-actions button { border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; min-width:26px; } /* 两个键共用：边框/背景/最小宽，不含字号和内边距 */
+.mall-actions .btn-edit { font-size:9px; padding:1px 6px 3px 6px; } /* ✏️ 编辑 padding：上 右 下 左，靠上下两值调居中 */
+.mall-actions .btn-del { font-size:18px; padding:1px 6px 2px 6px; color:#888; border-color:var(--border); } /* 🗑 删除 padding：上 右 下 左，靠上下两值调居中 */
 .mall-actions .btn-del:hover { background:#fdecea; border-color:#e74c3c; }
 .map-wrap { flex:1; position:relative; }
 #map { width:100%; height:100%; }
@@ -75,7 +76,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .float-actions button { width:34px; height:34px; border-radius:9px; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; }
 .float-actions button.active-tool { background:#3498db; color:#fff; }
 /* emoji 字形天生偏下，用 span 整体上顶纠正；偏多的单独加大 */
-.float-actions button > span { display:block; transform:translateY(-1px); }
+.float-actions button > span { display:block; transform:translateY(-1.3px); }
 .float-actions button#btnRoute > span { transform:translateY(-2px); }
 .info-card { padding:4px 6px; font-size:13px; line-height:1.6; min-width:200px; max-width:280px; }
 .info-card h4 { font-size:15px; margin-bottom:6px; }
@@ -109,8 +110,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .btn { padding:8px 20px; border-radius:8px; border:none; font-size:14px; cursor:pointer; }
 /* 活动场地编辑窗：顶/底栏更紧凑、按钮缩一圈 */
 #modalOverlay .modal-header { padding:10px 18px; }
-#modalOverlay .modal-footer { padding:10px 18px; }
-#modalOverlay .modal-footer .btn { padding:6px 16px; font-size:13px; }
+#modalOverlay .modal-footer { padding:12px 0; }
+#modalOverlay .modal-footer .btn { padding:6px 15px; font-size:12.5px; }
+#modalOverlay #btnDelete { margin-left:12px; }      /* 删除 离窗口左边的距离 */
+#modalOverlay .modal-footer .btn-primary { margin-right:12px; } /* 保存/取消组 离窗口右边的距离 */
 .btn-primary { background:#333; color:#fff; }
 .btn-danger { background:#fff; color:var(--danger); border:1px solid var(--danger); }
 .btn-secondary { background:#f0f0f0; color:#666; }
@@ -184,7 +187,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .cal-nav { display:flex; gap:5px; align-items:center; }
 .cal-nav button { font-size:12px; padding:3px 9px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; }
 .cal-nav button:hover { background:#f0f0f0; }
-#calModalOverlay .modal-header { padding:10px 14px; }
+#calModalOverlay .modal-header { padding:12px 14px; }
 #calModalOverlay .modal-header h3 { font-size:15px; }
 .cal-jump-btn { padding:3px 9px !important; }
 .sched-row { display:flex; gap:6px; align-items:flex-end; margin-bottom:6px; }
@@ -223,7 +226,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
   <h1>🐾 宠物回家企划活动信息地图</h1>
   <span class="badge editable" id="fixedBadge" title="点击编辑此栏"></span>
   <span style="flex:1"></span>
-  <small style="color:#3498db;font-size:12px;cursor:pointer;text-decoration:underline dotted;font-weight:500" id="clock" title="点击查看日历" onclick="openCalModal()"></small>
+  <small style="color:#3498db;font-size:15px;cursor:pointer;text-decoration:underline dotted;font-weight:500;margin-right:8px;" id="clock" title="点击查看日历" onclick="openCalModal()"></small>
 </div>
 
 <div class="container">
@@ -387,7 +390,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
         <div><label>所属区域 *</label>
           <select id="fDistrict"><option value="">请选择</option>
             <option>东城区</option><option>西城区</option><option>朝阳区</option><option>海淀区</option>
-            <option>丰台区</option><option>石景山区</option><option>通州区</option><option>大兴区</option>
+            <option>丰台区</option><option>石景山区</option><option>通州区</option><option>大兴区</option><option>房山区</option>
             <option>顺义区</option><option>昌平区</option><option>其他</option></select></div>
         <div><label>场地类型</label>
           <select id="fVenueType"><option value="indoor">室内</option><option value="outdoor">室外</option><option value="both">室内+室外</option></select></div>
@@ -411,7 +414,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
       <label>备注</label><textarea id="fNotes" placeholder="如：场地偏小，注意笼位限制"></textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="btnDelete" style="margin-right:auto;display:none" onclick="deleteMall()">🗑 删除</button>
+      <button class="btn btn-danger" id="btnDelete" style="margin-right:auto;display:none" onclick="deleteMall()">删除</button>
       <button class="btn btn-secondary" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" onclick="saveMall()">保存</button>
     </div>
@@ -425,9 +428,9 @@ var STORAGE_KEY = 'pet_adoption_map_v5';
 var BADGE_KEY = 'pet_adoption_badge_v5';
 
 var DISTRICT_COLORS = {
-  '东城区':'#e74c3c','西城区':'#3498db','朝阳区':'#e67e22','海淀区':'#2ecc71',
-  '丰台区':'#9b59b6','石景山区':'#1abc9c','通州区':'#f39c12','大兴区':'#e91e63',
-  '顺义区':'#00bcd4','昌平区':'#795548','其他':'#95a5a6'
+  '东城区':'#a6217f','西城区':'#d6abc1','朝阳区':'#fba40e','海淀区':'#4ddbff',
+  '丰台区':'#76a32d','石景山区':'#e6081b','通州区':'#c23a30','大兴区':'#008e9c','房山区':'#e46022',
+  '顺义区':'#6a357d','昌平区':'#de82b2','其他':'#95a5a6'
 };
 var VENUE_LABELS = { indoor:'室内', outdoor:'室外', both:'室内+室外' };
 
@@ -903,7 +906,7 @@ function renderMallList() {
         +'<div class="mall-top">'
           +'<span class="mall-name" onclick="focusMall(\''+m.id+'\')" title="'+esc(m.name)+'">'+esc(m.name)+'</span>'
           +'<span class="mall-actions">'
-            +'<button onclick="event.stopPropagation();openEditModal(\''+m.id+'\')">✏️</button>'
+            +'<button class="btn-edit" onclick="event.stopPropagation();openEditModal(\''+m.id+'\')">✏️</button>'
             +'<button class="btn-del" onclick="event.stopPropagation();confirmDelete(\''+m.id+'\')">🗑</button>'
           +'</span>'
         +'</div>'
