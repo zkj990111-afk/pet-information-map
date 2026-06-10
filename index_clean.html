@@ -72,8 +72,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .float-legend .legend-toggle:hover .legend-chev polyline { stroke:#3498db; }
 .float-legend .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
 .float-actions { position:absolute; bottom:20px; right:10px; display:flex; flex-direction:column; gap:6px; z-index:30; }
-.float-actions button { width:34px; height:34px; border-radius:9px; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.float-actions button { width:34px; height:34px; border-radius:9px; border:none; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; }
 .float-actions button.active-tool { background:#3498db; color:#fff; }
+/* emoji 字形天生偏下，用 span 整体上顶纠正；偏多的单独加大 */
+.float-actions button > span { display:block; transform:translateY(-1px); }
+.float-actions button#btnRoute > span { transform:translateY(-2px); }
 .info-card { padding:4px 6px; font-size:13px; line-height:1.6; min-width:200px; max-width:280px; }
 .info-card h4 { font-size:15px; margin-bottom:6px; }
 .info-card .row { display:flex; justify-content:space-between; margin-bottom:1px; }
@@ -285,10 +288,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div class="float-legend" id="legend"></div>
     <div class="route-result" id="routeResult"></div>
     <div class="float-actions">
-      <button onclick="measureStraight()" id="btnStraight" title="直线测距">📏</button>
-      <button onclick="measureRoute()" id="btnRoute" title="驾车路线测距">🚗</button>
-      <button onclick="clearMeasure()" title="清除测距">✖</button>
-      <button onclick="fitAll()" title="缩放到全部">⛶</button>
+      <button onclick="measureStraight()" id="btnStraight" title="直线测距"><span>📏</span></button>
+      <button onclick="measureRoute()" id="btnRoute" title="驾车路线测距"><span>🚗</span></button>
+      <button onclick="clearMeasure()" title="清除测距"><span>✖</span></button>
+      <button onclick="fitAll()" title="缩放到全部"><span>⛶</span></button>
     </div>
   </div>
 </div>
