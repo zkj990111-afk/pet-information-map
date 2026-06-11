@@ -150,9 +150,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .route-result { display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.95); border-radius:10px; padding:8px 16px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:35; white-space:nowrap; }
 .route-result.show { display:block; }
 .route-result strong { color:#3498db; }
-/* 路线结果面板：三标签 + 摘要/公交方案列表 */
-.route-box { display:none; position:absolute; top:60px; left:50%; transform:translateX(-50%); width:360px; max-width:92%; background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.18); z-index:36; overflow:hidden; }
-.route-box.show { display:block; }
+/* 路线结果面板：右侧停靠 + 可收起，含四标签/摘要/方案列表 */
+.route-box { position:absolute; top:0; right:0; bottom:0; width:300px; max-width:80%; background:#fff; box-shadow:-3px 0 14px rgba(0,0,0,0.12); z-index:45; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.28s ease; }
+.route-box.show { transform:translateX(0); }
+.route-box.show.collapsed { transform:translateX(100%); }
+.route-box-head { padding:12px 14px; border-bottom:1px solid var(--border); font-size:14px; font-weight:600; color:#2c3e50; }
 .route-tabs { display:flex; align-items:center; border-bottom:1px solid var(--border); }
 .route-tab { flex:1; padding:9px 4px; font-size:13px; border:none; background:#fff; cursor:pointer; color:#666; border-bottom:2px solid transparent; transition:all 0.15s; }
 .route-tab:hover { background:#f5f9ff; }
@@ -160,12 +162,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .route-box.via-mode .route-tab[data-mode='transit'],
 .route-box.via-mode .route-tab[data-mode='riding'],
 .route-box.via-mode .route-tab[data-mode='walking'] { opacity:0.35; pointer-events:none; }
-.route-box-close { width:34px; border:none; background:#fff; cursor:pointer; color:#999; font-size:14px; border-left:1px solid var(--border); }
-.route-box-close:hover { color:#e74c3c; }
 .route-summary { padding:10px 14px; font-size:13px; line-height:1.6; }
 .route-summary strong { color:#3498db; }
-.route-panel { max-height:46vh; overflow-y:auto; }
+.route-panel { flex:1; overflow-y:auto; }
 .route-panel:empty { display:none; }
+/* 路线面板的收起/展开贴边拉条（镜像左栏，贴在右侧） */
+.route-collapse-tab { display:none; position:absolute; right:300px; top:50%; transform:translateY(-50%); z-index:46; width:18px; height:50px; background:#fff; border:1px solid var(--border); border-right:none; border-radius:9px 0 0 9px; box-shadow:-2px 0 6px rgba(0,0,0,0.08); font-size:15px; color:#999; cursor:pointer; align-items:center; justify-content:center; padding:0; transition:right 0.28s ease; }
+.map-wrap.route-open .route-collapse-tab { display:flex; }
+.map-wrap.route-collapsed .route-collapse-tab { right:0; }
+.map-wrap.panel-open .route-collapse-tab { /* 占位，避免被其它规则影响 */ }
 /* #1 #2 右侧地点信息面板（含搜附近） */
 .info-panel { position:absolute; top:0; right:0; bottom:0; width:300px; max-width:80%; background:#fff; box-shadow:-3px 0 14px rgba(0,0,0,0.12); z-index:45; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.25s ease; }
 .info-panel.show { transform:translateX(0); }
@@ -215,7 +220,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .rp-fields { position:relative; display:flex; flex-direction:column; gap:7px; padding-right:34px; }
 .rp-row { display:flex; align-items:center; gap:8px; }
 .rp-row .autocomplete-wrap { flex:1; min-width:0; }
-.rp-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,0.08); }
+.rp-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; margin:0 2px; }
 .rp-dot-start { background:#2ecc71; }
 .rp-dot-end { background:#e74c3c; }
 .rp-dot-via { background:#f39c12; }
@@ -223,8 +228,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .rp-input:focus { border-color:#3498db; }
 .rp-row-rm { border:none; background:none; color:#bbb; cursor:pointer; font-size:14px; width:18px; flex-shrink:0; padding:0; line-height:1; }
 .rp-row-rm:hover { color:#e74c3c; }
-.rp-swap { position:absolute; right:0; top:50%; transform:translateY(-50%); width:28px; height:28px; border:1px solid var(--border); background:#fff; border-radius:50%; cursor:pointer; color:#666; display:flex; align-items:center; justify-content:center; padding:0; transition:all 0.15s; }
-.rp-swap:hover { color:#3498db; border-color:#3498db; background:#f0f7ff; }
+.rp-swap { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:24px; height:24px; border:none; background:none; cursor:pointer; color:#888; display:flex; align-items:center; justify-content:center; padding:0; transition:color 0.15s; }
+.rp-swap:hover { color:#3498db; }
 .rp-actions { display:flex; align-items:center; gap:8px; }
 .rp-add { border:1px dashed #bcd; background:#fff; color:#3498db; border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer; white-space:nowrap; }
 .rp-add:hover { background:#f0f7ff; }
@@ -393,13 +398,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <div class="float-weather" id="weather"><div class="wtitle">北京</div><div class="desc">加载中...</div></div>
     <div class="float-legend" id="legend"></div>
     <div class="route-result" id="routeResult"></div>
+    <button class="route-collapse-tab" id="routeCollapseTab" onclick="toggleRoutePanel()" title="收起/展开路线">›</button>
     <div class="route-box" id="routeBox">
+      <div class="route-box-head">🧭 路线规划</div>
       <div class="route-tabs">
         <button class="route-tab active" data-mode="driving" onclick="setRouteMode('driving')">🚗 驾车</button>
         <button class="route-tab" data-mode="transit" onclick="setRouteMode('transit')">🚌 公交</button>
         <button class="route-tab" data-mode="riding" onclick="setRouteMode('riding')">🚴 骑行</button>
         <button class="route-tab" data-mode="walking" onclick="setRouteMode('walking')">🚶 步行</button>
-        <button class="route-box-close" onclick="clearMeasure()" title="关闭">✕</button>
       </div>
       <div class="route-summary" id="routeSummary"></div>
       <div class="route-panel" id="routePanel"></div>
@@ -778,12 +784,27 @@ function clearRouteObj(){ if(routeObj){ try{routeObj.clear();}catch(e){} routeOb
 // 弹出方式标签面板并默认驾车
 function showRouteBox(){
   hideRouteResult();
+  closeInfoPanel();                 // 右侧互斥：先关地点信息面板
   var box = document.getElementById('routeBox');
-  box.classList.add('show');
+  box.classList.add('show'); box.classList.remove('collapsed');
   // 有途径点时只有驾车可用，其它方式置灰禁用
   box.classList.toggle('via-mode', rpWaypointPts.length > 0);
-  positionRouteBox();
+  var mw = document.querySelector('.map-wrap');
+  mw.classList.add('route-open', 'panel-open'); mw.classList.remove('route-collapsed');
+  document.getElementById('routeCollapseTab').textContent = '›';
+  setTimeout(function(){ if(map&&map.resize)map.resize(); alignCompass(); }, 300);
   setRouteMode('driving');
+}
+
+// 路线面板收起/展开（贴边拉条），镜像左栏
+function toggleRoutePanel(){
+  var box = document.getElementById('routeBox');
+  var mw = document.querySelector('.map-wrap');
+  var collapsed = box.classList.toggle('collapsed');
+  mw.classList.toggle('route-collapsed', collapsed);
+  mw.classList.toggle('panel-open', !collapsed);   // 收起时天气/按钮回位
+  document.getElementById('routeCollapseTab').textContent = collapsed ? '‹' : '›';
+  setTimeout(function(){ if(map&&map.resize)map.resize(); alignCompass(); }, 300);
 }
 
 // 地图取点流程（右下角按钮）：无途径点
@@ -800,17 +821,8 @@ function startRoutePlanWp(s, e, vias){
   showRouteBox();
 }
 
-// 路线规划面板展开时，结果框落在面板正下方，避免重叠；否则用 CSS 默认位置
-function positionRouteBox(){
-  var box = document.getElementById('routeBox');
-  var fs = document.getElementById('floatSearch');
-  if(!box || !fs) return;
-  if(fs.classList.contains('planning')){
-    box.style.top = (fs.offsetTop + fs.offsetHeight + 8) + 'px';
-  } else {
-    box.style.top = '';
-  }
-}
+// 路线结果已改为右侧停靠面板，无需相对定位（保留空函数避免改动调用处）
+function positionRouteBox(){ }
 
 // 切换方式（标签点击也调它）
 function setRouteMode(mode){
@@ -1027,6 +1039,7 @@ var placeMarker = null;
 
 function showPlaceInfo(lng, lat, name){
   if(!AMap.Geocoder){ return; }
+  hideRouteBox();                  // 右侧互斥：先收掉路线面板
   nearbyCenter = [lng, lat];
   // 在点击处放一个标记
   if(placeMarker) placeMarker.setMap(null);
@@ -1615,7 +1628,12 @@ function clearAllLines() {
 }
 function hideRouteBox(){
   var box=document.getElementById('routeBox');
-  if(box){ box.classList.remove('show'); document.getElementById('routeSummary').innerHTML=''; document.getElementById('routePanel').innerHTML=''; }
+  if(box){ box.classList.remove('show','collapsed'); document.getElementById('routeSummary').innerHTML=''; document.getElementById('routePanel').innerHTML=''; }
+  var mw=document.querySelector('.map-wrap');
+  if(mw){ mw.classList.remove('route-open','route-collapsed');
+    if(!document.getElementById('infoPanel').classList.contains('show')) mw.classList.remove('panel-open');
+    setTimeout(function(){ if(map&&map.resize)map.resize(); alignCompass(); }, 300);
+  }
 }
 function showRouteResult(h){var el=document.getElementById('routeResult');el.innerHTML=h;el.classList.add('show');}
 function hideRouteResult(){document.getElementById('routeResult').classList.remove('show');}
