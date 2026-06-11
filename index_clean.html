@@ -157,6 +157,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .route-tab { flex:1; padding:9px 4px; font-size:13px; border:none; background:#fff; cursor:pointer; color:#666; border-bottom:2px solid transparent; transition:all 0.15s; }
 .route-tab:hover { background:#f5f9ff; }
 .route-tab.active { color:#3498db; font-weight:600; border-bottom-color:#3498db; }
+.route-box.via-mode .route-tab[data-mode='transit'],
+.route-box.via-mode .route-tab[data-mode='riding'],
+.route-box.via-mode .route-tab[data-mode='walking'] { opacity:0.35; pointer-events:none; }
 .route-box-close { width:34px; border:none; background:#fff; cursor:pointer; color:#999; font-size:14px; border-left:1px solid var(--border); }
 .route-box-close:hover { color:#e74c3c; }
 .route-summary { padding:10px 14px; font-size:13px; line-height:1.6; }
@@ -203,6 +206,33 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
 .ip-actions { display:none; gap:8px; margin-bottom:14px; }
 .ip-actions.show { display:flex; }
 .ip-actions .btn { flex:1; padding:8px 6px; font-size:13px; }
+/* 顶部搜索条：普通态 / 路线规划态切换 */
+.fs-normal { display:flex; align-items:center; gap:4px; width:100%; }
+.float-search.planning .fs-normal { display:none; }
+.float-search.planning { border-radius:14px; padding:9px 12px; }
+.fs-route-planner { display:none; width:100%; flex-direction:column; gap:8px; }
+.float-search.planning .fs-route-planner { display:flex; }
+.rp-fields { position:relative; display:flex; flex-direction:column; gap:7px; padding-right:34px; }
+.rp-row { display:flex; align-items:center; gap:8px; }
+.rp-row .autocomplete-wrap { flex:1; min-width:0; }
+.rp-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,0.08); }
+.rp-dot-start { background:#2ecc71; }
+.rp-dot-end { background:#e74c3c; }
+.rp-dot-via { background:#f39c12; }
+.rp-input { width:100%; border:1px solid var(--border); border-radius:8px; padding:7px 9px; font-size:13px; font-family:inherit; outline:none; box-sizing:border-box; color:var(--text); }
+.rp-input:focus { border-color:#3498db; }
+.rp-row-rm { border:none; background:none; color:#bbb; cursor:pointer; font-size:14px; width:18px; flex-shrink:0; padding:0; line-height:1; }
+.rp-row-rm:hover { color:#e74c3c; }
+.rp-swap { position:absolute; right:0; top:50%; transform:translateY(-50%); width:28px; height:28px; border:1px solid var(--border); background:#fff; border-radius:50%; cursor:pointer; color:#666; display:flex; align-items:center; justify-content:center; padding:0; transition:all 0.15s; }
+.rp-swap:hover { color:#3498db; border-color:#3498db; background:#f0f7ff; }
+.rp-actions { display:flex; align-items:center; gap:8px; }
+.rp-add { border:1px dashed #bcd; background:#fff; color:#3498db; border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer; white-space:nowrap; }
+.rp-add:hover { background:#f0f7ff; }
+.rp-add:disabled { color:#bbb; border-color:#eee; cursor:not-allowed; background:#fafafa; }
+.rp-go { padding:6px 16px; font-size:13px; }
+.rp-close { border:none; background:none; color:#999; cursor:pointer; font-size:15px; width:24px; flex-shrink:0; }
+.rp-close:hover { color:#e74c3c; }
+.fs-route-planner .suggestions { top:calc(100% + 4px); left:0; right:0; border:1px solid var(--border); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.14); }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 .cal-cell { padding:4px 2px; text-align:center; cursor:pointer; border-radius:6px; font-size:13px; min-height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fafafa; border:1.5px solid transparent; transition:all 0.1s; position:relative; }
 .cal-cell:hover { background:#f0f7ff; }
@@ -330,12 +360,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC"
     <button class="sidebar-tab" id="sidebarTab" onclick="toggleSidebar()" title="收起/展开左栏">‹</button>
     <div id="map"></div>
     <div class="float-search" id="floatSearch">
-      <span class="fs-ico fs-mag" title="搜索"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span>
-      <div class="autocomplete-wrap" style="flex:1;min-width:0">
-        <input type="text" id="searchBox" placeholder="搜索商场 / 地标 / 任意位置" autocomplete="off">
-        <div class="suggestions" id="searchSugBox"></div>
+      <!-- 普通搜索态 -->
+      <div class="fs-normal" id="fsNormal">
+        <span class="fs-ico fs-mag" title="搜索"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span>
+        <div class="autocomplete-wrap" style="flex:1;min-width:0">
+          <input type="text" id="searchBox" placeholder="搜索商场 / 地标 / 任意位置" autocomplete="off">
+          <div class="suggestions" id="searchSugBox"></div>
+        </div>
+        <button class="fs-ico fs-route" id="fsDirBtn" onclick="openRoutePlanner()" title="路线规划：输入起点终点"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 12 12 22 2 12"/><path d="M10 15 V11 H14"/><polyline points="12.5 9.5 14.5 11 12.5 12.5"/></svg></button>
       </div>
-      <button class="fs-ico fs-route" id="fsRouteBtn" onclick="measureRoute()" title="路线规划：自选起点终点"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.2"/><path d="M6 17 V11 a5 5 0 0 1 5-5 h4"/><path d="M13 3 l4 3 -4 3"/></svg></button>
+      <!-- 路线规划态 -->
+      <div class="fs-route-planner" id="fsRoutePlanner">
+        <div class="rp-fields" id="rpFields">
+          <div class="rp-row" data-role="start">
+            <span class="rp-dot rp-dot-start"></span>
+            <div class="autocomplete-wrap"><input class="rp-input" placeholder="选择起点" autocomplete="off"><div class="suggestions"></div></div>
+          </div>
+          <div class="rp-row" data-role="end">
+            <span class="rp-dot rp-dot-end"></span>
+            <div class="autocomplete-wrap"><input class="rp-input" placeholder="选择终点" autocomplete="off"><div class="suggestions"></div></div>
+          </div>
+          <button class="rp-swap" id="rpSwap" onclick="swapStartEnd()" title="交换起点/终点"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 7 20"/><polyline points="4 7 7 4 10 7"/><polyline points="17 20 17 4"/><polyline points="14 17 17 20 20 17"/></svg></button>
+        </div>
+        <div class="rp-actions">
+          <button class="rp-add" onclick="addWaypoint()">＋ 途径点</button>
+          <span style="flex:1"></span>
+          <button class="rp-go btn btn-primary" onclick="runRoutePlanner()">规划路线</button>
+          <button class="rp-close" onclick="closeRoutePlanner()" title="退出路线规划">✕</button>
+        </div>
+      </div>
     </div>
     <div class="float-weather" id="weather"><div class="wtitle">北京</div><div class="desc">加载中...</div></div>
     <div class="float-legend" id="legend"></div>
@@ -718,15 +771,45 @@ function esc(s) {
 var routeObj = null;                 // 当前路线对象（Driving/Walking/Transfer）
 var routeEndLng = 0, routeEndLat = 0;
 var ROUTE_CITY = '北京';
+var rpWaypointPts = [];              // 途径点坐标 [[lng,lat],...]，仅驾车生效
 
 function clearRouteObj(){ if(routeObj){ try{routeObj.clear();}catch(e){} routeObj=null; } }
 
-// 选完起点+终点后调用：弹出三标签面板，默认驾车
+// 弹出方式标签面板并默认驾车
+function showRouteBox(){
+  hideRouteResult();
+  var box = document.getElementById('routeBox');
+  box.classList.add('show');
+  // 有途径点时只有驾车可用，其它方式置灰禁用
+  box.classList.toggle('via-mode', rpWaypointPts.length > 0);
+  positionRouteBox();
+  setRouteMode('driving');
+}
+
+// 地图取点流程（右下角按钮）：无途径点
 function startRoutePlan(sLng, sLat, eLng, eLat){
   routeStartLng=sLng; routeStartLat=sLat; routeEndLng=eLng; routeEndLat=eLat;
-  hideRouteResult();
-  document.getElementById('routeBox').classList.add('show');
-  setRouteMode('driving');
+  rpWaypointPts = [];
+  showRouteBox();
+}
+
+// 规划面板流程（顶部搜索条）：可带途径点
+function startRoutePlanWp(s, e, vias){
+  routeStartLng=s[0]; routeStartLat=s[1]; routeEndLng=e[0]; routeEndLat=e[1];
+  rpWaypointPts = vias || [];
+  showRouteBox();
+}
+
+// 路线规划面板展开时，结果框落在面板正下方，避免重叠；否则用 CSS 默认位置
+function positionRouteBox(){
+  var box = document.getElementById('routeBox');
+  var fs = document.getElementById('floatSearch');
+  if(!box || !fs) return;
+  if(fs.classList.contains('planning')){
+    box.style.top = (fs.offsetTop + fs.offsetHeight + 8) + 'px';
+  } else {
+    box.style.top = '';
+  }
 }
 
 // 切换方式（标签点击也调它）
@@ -745,6 +828,143 @@ function setRouteMode(mode){
   else if(mode==='transit') calcTransitRoute(s,e,summary,panel);
 }
 
+// ==================== 顶部搜索条 · 路线规划面板（输入起终点/途径点） ====================
+var rpAuto = null, rpAttached = false, rpDocClick = false;
+var RP_MAX_VIA = 5;
+function rpNorm(v){ if(v==null)return''; if(Array.isArray(v))return v.length?v.join(' '):''; return String(v); }
+
+function openRoutePlanner(){
+  if(typeof AMap==='undefined' || !AMap.AutoComplete){ alert('搜索组件未加载，请稍后再试'); return; }
+  if(!rpAuto) rpAuto = new AMap.AutoComplete({ city:'北京', citylimit:true });
+  document.getElementById('floatSearch').classList.add('planning');
+  if(!rpAttached){
+    document.querySelectorAll('#rpFields .rp-row .autocomplete-wrap').forEach(attachRpAutocomplete);
+    rpAttached = true;
+  }
+  // 点面板外关掉下拉
+  if(!rpDocClick){
+    document.addEventListener('click', function(e){
+      if(!e.target.closest('#fsRoutePlanner')){
+        document.querySelectorAll('#fsRoutePlanner .suggestions.show').forEach(function(s){ s.classList.remove('show'); });
+      }
+    });
+    rpDocClick = true;
+  }
+  setTimeout(function(){ var si=document.querySelector('#rpFields .rp-row[data-role="start"] .rp-input'); if(si) si.focus(); }, 60);
+}
+
+function closeRoutePlanner(){
+  document.getElementById('floatSearch').classList.remove('planning');
+  positionRouteBox();
+}
+
+// 给一个 .autocomplete-wrap 绑定地址自动补全；选中后把坐标存到所在 .rp-row 的 dataset
+function attachRpAutocomplete(wrap){
+  var input = wrap.querySelector('.rp-input');
+  var sug = wrap.querySelector('.suggestions');
+  var row = input.closest('.rp-row');
+  var timer;
+  function doSearch(){
+    var kw = input.value.trim();
+    if(!kw){ sug.classList.remove('show'); return; }
+    row.dataset.lng=''; row.dataset.lat='';   // 改了字就作废上次选的坐标
+    rpAuto.search(kw, function(status,result){
+      if(status!=='complete' || !result.tips){ sug.classList.remove('show'); return; }
+      var tips = result.tips.filter(function(t){ return t.location && t.location.lng && t.name; });
+      if(!tips.length){ sug.classList.remove('show'); return; }
+      var html='';
+      tips.slice(0,6).forEach(function(t){
+        var addr = rpNorm(t.district)+rpNorm(t.address);
+        html += '<div class="sug-item" data-name="'+esc(t.name)+'" data-lng="'+t.location.lng+'" data-lat="'+t.location.lat+'">'
+          + '<div class="sug-name">'+esc(t.name)+'</div><div class="sug-addr">'+esc(addr||'（无详细地址）')+'</div></div>';
+      });
+      sug.innerHTML=html; sug.classList.add('show');
+      sug.querySelectorAll('.sug-item').forEach(function(el){
+        el.addEventListener('mousedown', function(e){ e.preventDefault(); });
+        el.addEventListener('click', function(){
+          input.value = this.dataset.name;
+          row.dataset.lng = this.dataset.lng;
+          row.dataset.lat = this.dataset.lat;
+          sug.classList.remove('show');
+        });
+      });
+    });
+  }
+  input.addEventListener('input', function(){ clearTimeout(timer); timer=setTimeout(doSearch,250); });
+  input.addEventListener('focus', function(){ if(input.value.trim() && !row.dataset.lng) doSearch(); });
+}
+
+// 交换起点 / 终点（值 + 已选坐标）
+function swapStartEnd(){
+  var s = document.querySelector('#rpFields .rp-row[data-role="start"]');
+  var e = document.querySelector('#rpFields .rp-row[data-role="end"]');
+  if(!s||!e) return;
+  var si=s.querySelector('.rp-input'), ei=e.querySelector('.rp-input');
+  var tv=si.value; si.value=ei.value; ei.value=tv;
+  var tl=s.dataset.lng, ta=s.dataset.lat;
+  s.dataset.lng=e.dataset.lng||''; s.dataset.lat=e.dataset.lat||'';
+  e.dataset.lng=tl||''; e.dataset.lat=ta||'';
+}
+
+// 新增途径点输入框（插在终点之前）
+function addWaypoint(){
+  var vias = document.querySelectorAll('#rpFields .rp-row[data-role="via"]');
+  if(vias.length >= RP_MAX_VIA){ return; }
+  var endRow = document.querySelector('#rpFields .rp-row[data-role="end"]');
+  var row = document.createElement('div');
+  row.className = 'rp-row'; row.setAttribute('data-role','via');
+  row.innerHTML = '<span class="rp-dot rp-dot-via"></span>'
+    + '<div class="autocomplete-wrap"><input class="rp-input" placeholder="途径点" autocomplete="off"><div class="suggestions"></div></div>'
+    + '<button class="rp-row-rm" title="删除途径点" onclick="removeWaypoint(this)">✕</button>';
+  document.getElementById('rpFields').insertBefore(row, endRow);
+  attachRpAutocomplete(row.querySelector('.autocomplete-wrap'));
+  refreshAddViaBtn();
+  positionRouteBox();
+  row.querySelector('.rp-input').focus();
+}
+
+function removeWaypoint(btn){
+  var row = btn.closest('.rp-row');
+  if(row) row.parentNode.removeChild(row);
+  refreshAddViaBtn();
+  positionRouteBox();
+}
+
+function refreshAddViaBtn(){
+  var n = document.querySelectorAll('#rpFields .rp-row[data-role="via"]').length;
+  var btn = document.querySelector('.rp-add');
+  if(btn) btn.disabled = (n >= RP_MAX_VIA);
+}
+
+// 把一行解析成坐标：优先用已选坐标，否则拿关键词搜第一条
+function resolveRow(row, cb){
+  if(row.dataset.lng && row.dataset.lat){ cb([+row.dataset.lng, +row.dataset.lat]); return; }
+  var kw = row.querySelector('.rp-input').value.trim();
+  if(!kw){ cb(null); return; }
+  rpAuto.search(kw, function(status,result){
+    var t = (status==='complete' && result.tips) ? result.tips.filter(function(x){ return x.location && x.location.lng; })[0] : null;
+    if(t){ row.dataset.lng=t.location.lng; row.dataset.lat=t.location.lat; cb([+t.location.lng,+t.location.lat]); }
+    else cb(null);
+  });
+}
+
+// 点"规划路线"：解析所有行 → 起点+终点(+途径点) → 出方案
+function runRoutePlanner(){
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#rpFields .rp-row'));
+  var coords = new Array(rows.length);
+  var pending = rows.length;
+  rows.forEach(function(row, i){
+    resolveRow(row, function(c){ coords[i]=c; if(--pending===0) finish(); });
+  });
+  function finish(){
+    var start = coords[0], end = coords[coords.length-1];
+    if(!start){ alert('请先输入并从下拉中选择「起点」'); return; }
+    if(!end){ alert('请先输入并从下拉中选择「终点」'); return; }
+    var vias = coords.slice(1, coords.length-1).filter(Boolean);
+    startRoutePlanWp(start, end, vias);
+  }
+}
+
 function calcRidingRoute(s,e,summary){
   summary.innerHTML='🚴 计算中...';
   if(!AMap.Riding){ summary.innerHTML='⚠️ 骑行插件未加载'; return; }
@@ -761,12 +981,20 @@ function calcDrivingRoute(s,e,summary){
   summary.innerHTML='🚗 计算中...';
   if(!AMap.Driving){ summary.innerHTML='⚠️ 驾车插件未加载'; return; }
   routeObj=new AMap.Driving({ map:map, hideMarkers:true, autoFitView:true, showTraffic:false, panel:'routePanel' });
-  routeObj.search(s, e, function(status,result){
+  var viaTxt = '';
+  function done(status,result){
     if(status==='complete' && result.routes && result.routes.length){
       var r=result.routes[0];
-      summary.innerHTML='🚗 驾车 <strong>'+(r.distance/1000).toFixed(1)+' 公里</strong> · 约 <strong>'+Math.round(r.time/60)+' 分钟</strong>';
+      summary.innerHTML='🚗 驾车'+viaTxt+' <strong>'+(r.distance/1000).toFixed(1)+' 公里</strong> · 约 <strong>'+Math.round(r.time/60)+' 分钟</strong>';
     } else summary.innerHTML='⚠️ 驾车路线计算失败';
-  });
+  }
+  if(rpWaypointPts && rpWaypointPts.length){
+    viaTxt = '（途经 '+rpWaypointPts.length+' 点）';
+    var wps = rpWaypointPts.map(function(p){ return new AMap.LngLat(p[0], p[1]); });
+    routeObj.search(s, e, { waypoints: wps }, done);
+  } else {
+    routeObj.search(s, e, done);
+  }
 }
 
 function calcWalkingRoute(s,e,summary){
@@ -1323,8 +1551,6 @@ function deactivateTools(keepRouteMarkers) {
   var br = document.getElementById('btnRoute');
   bs.classList.remove('active-tool'); bs.innerHTML = BTN_STRAIGHT_ICON; // 还原 📏
   br.classList.remove('active-tool'); br.innerHTML = BTN_ROUTE_ICON;    // 还原箭头
-  var fr = document.getElementById('fsRouteBtn');
-  if (fr) fr.classList.remove('active-tool'); // 搜索框里的路线 icon 熄灭
 }
 
 function measureStraight() {
@@ -1377,8 +1603,6 @@ function measureRoute() {
   var br = document.getElementById('btnRoute');
   br.classList.add('active-tool');
   br.innerHTML = BTN_EXIT_ICON; // 图标变 ✖
-  var fr = document.getElementById('fsRouteBtn');
-  if (fr) fr.classList.add('active-tool'); // 搜索框里的路线 icon 点亮
   routeMarkersTemp = [];
   routeClickHandler = function(e) { handleRoutePick(e.lnglat.getLng(), e.lnglat.getLat()); };
   map.on('click', routeClickHandler);
